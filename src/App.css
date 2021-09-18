@@ -37,6 +37,7 @@
   }
 }
 
-.App-button {
+.App-button:hover {
   cursor: pointer;
+  font-weight: bold;
 }

@@ -6,7 +6,6 @@ import React, { Component } from 'react';
 import { 
   UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem, Button,
   Navbar,
-  NavbarToggler,
   NavbarBrand,
   Nav,
   NavItem,
@@ -20,7 +19,7 @@ class App extends Component {
   render() {
       return (
           <div className="App">
-              <h1>Text editor baserad på TinyMCE och React</h1>
+              <h1>Text editor baserad på React and TinyMCE</h1>
               <TinyEditor />
           </div>
       );
