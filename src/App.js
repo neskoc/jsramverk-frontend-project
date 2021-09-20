@@ -22,9 +22,10 @@ import './App.css';
 
 const config = require("./config/db/config.json");
 let dsn = config.apiBaseUrl;
-if (process.env.NODE_ENV !== 'local') {
+if (process.env.NODE_ENV === 'local') {
     dsn = "http://localhost:1337";
 }
+console.log("dsn: " + dsn);
 class App extends Component {
   render() {
       return (
