@@ -4,10 +4,15 @@
 
 import React, { Component } from 'react';
 import { 
-  UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem, Button,
+  UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem,
+  Button,
+  Collapse,
+  Form,
+  FormGroup,
+  Input,
+  Nav,
   Navbar,
   NavbarBrand,
-  Nav,
   NavItem,
   NavLink
 } from 'reactstrap';
@@ -15,6 +20,11 @@ import { Editor } from '@tinymce/tinymce-react';
 
 import './App.css';
 
+const config = require("./config/db/config.json");
+let dsn = config.apiBaseUrl;
+if (process.env.NODE_ENV !== 'local') {
+    dsn = "http://localhost:1337";
+}
 class App extends Component {
   render() {
       return (
@@ -30,32 +40,111 @@ class TinyEditor extends React.Component {
       super(props);
       this.state = {
         value: props.initialValue ?? '<p>Skriv din text här!</p>',
+        docName: '',
+        tmpDocName: '',
         editorRef: null,
+        isOpen: false,
         dropdownOpen: false,
-        setDropdownOpen: false
+        setDropdownOpen: false,
+        dropdownItems: []
       };
 
-      this.elements = ['Fil1', 'Fil2', 'Fil3', 'Fil4', 'Fil5'];
-      this.fillDropdownItems(this.elements);
+      this.fillDropdownItems();
 
+      this.saveDocName = this.saveDocName.bind(this);
+      this.loadDocument = this.loadDocument.bind(this);
+      this.updateDocument = this.updateDocument.bind(this);
       this.handleEditorChange = this.handleEditorChange.bind(this);
       this.log = this.log.bind(this);
       this.load = this.load.bind(this);
       this.toggle = this.toggle.bind(this);
+      this.toggleCollapsed = this.toggleCollapsed.bind(this);
       this.fillDropdownItems = this.fillDropdownItems.bind(this);
   }
 
-  dropdownItems = [];
-  
-  fillDropdownItems(items) {
+  docs = {};
+
+  async saveDocName(e) {
+    console.log(e.target.value);
+    this.setState({tmpDocName: await e.target.value});
+    console.log(this.state.tmpDocName);
+  }
+
+  async loadDocument(e) {
+    console.log(e.target.textContent);
+    this.setState({value: this.docs[e.target.textContent]});
+    this.setState({docName: await e.target.textContent});
+    this.setState({tmpDocName: this.state.docName});
+  }
+
+  async updateDocument() {
     const that = this;
-    items.forEach(function(item) {
-      that.dropdownItems.push(<DropdownItem>{item}</DropdownItem>);
-    }); 
+    this.setState({docName: this.state.tmpDocName});
+    if (this.state.docName !== '') {
+      console.log(this.state.docName);
+      console.log(this.state.value);
+      let docArr = {};
+      docArr["docName"] = this.state.docName;
+      docArr["content"] = this.state.value;
+      let data = {};
+      data["doc"] = docArr; 
+      data["api_key"] = config.api_key;
+      console.log(data);
+      await fetch(`${dsn}/mongo/update`, {
+        body: JSON.stringify(data),
+        headers: {
+            'content-type': 'application/json'
+        },
+        method: 'POST'
+      })
+      .then(function (response) {
+        console.log("response status: " + response.status);
+        that.fillDropdownItems();
+        return response;
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+    } else {
+      this.setState({isOpen: true})
+    }
+  }
+  
+  async fillDropdownItems() {
+    const that = this;
+    await this.getDocuments()
+    .then(function(docs) {
+      let localDropDownItems = [];
+      docs.forEach(function(doc) {
+        localDropDownItems.push(<DropdownItem key={doc._id} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
+        that.docs[doc.docName] = doc.content;
+      });
+      return localDropDownItems;
+    })
+    .then(function(items) {
+      that.setState({dropdownItems: items});
+    });
+  }
+
+  async getDocuments() {
+    const that = this;
+    await fetch(`${dsn}/mongo/list?api_key=${config.api_key}`)
+    .then(function (response) {
+      return response.json();
+    }).then(function(result) {
+      console.log("result.data:");
+      console.log(result.data);
+      that.docs = result.data;
+    });
+    return await Promise.resolve(that.docs);
   }
 
   toggle() {
     this.setState({dropdownOpen: !this.state.dropdownOpen});
+  }
+
+  toggleCollapsed() {
+    this.setState({isOpen: !this.state.isOpen});
   }
 
   log() {
@@ -80,25 +169,33 @@ class TinyEditor extends React.Component {
           <Nav className="mr-auto" navbar>
             <NavItem>
               <NavLink className="App-button"
-                onClick = {this.log}
+                onClick = {this.updateDocument}
               >
                 Spara
               </NavLink>
             </NavItem>
             <NavItem>
               <NavLink className="App-button"
-                onClick = {this.log}
+                onClick = {this.toggleCollapsed}
               >
                 Spara som
               </NavLink>
             </NavItem>
+            <Collapse isOpen={this.state.isOpen} unmountOnExit={true} navbar>
+              <Form>
+                <FormGroup>
+                  <Input type="text" name="docName" id="docName" placeholder="Ange dokumentnamn" value={this.state.tmpDocName} onChange={this.saveDocName}/>
+                  <Button onClick={this.updateDocument}>Spara dokumentet</Button>
+                </FormGroup>
+              </Form>
+            </Collapse>
             <UncontrolledDropdown nav inNavbar>
               <DropdownToggle nav caret>
                 Redigera fil
               </DropdownToggle>
               <DropdownMenu right>
                 <DropdownItem header>Välj en fil från listan</DropdownItem>
-                {this.dropdownItems}
+                {this.state.dropdownItems}
               </DropdownMenu>
             </UncontrolledDropdown>
           </Nav>
