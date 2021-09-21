@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "2.0.1",
   "private": true,
   "homepage": ".",
   "dependencies": {
@@ -16,7 +16,7 @@
     "tinymce": "^5.9.2",
     "web-vitals": "^1.1.2"
   },
-  "scripts": { 
+  "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
