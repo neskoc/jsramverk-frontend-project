@@ -21,9 +21,9 @@ import { Editor } from '@tinymce/tinymce-react';
 import './App.css';
 
 const config = require("./config/db/config.json");
-let dsn = config.apiBaseUrl;
+let dsn = config.azure_base_url;
 if (process.env.NODE_ENV === 'local') {
-    dsn = "http://localhost:1337";
+     dsn = "http://localhost:1337";
 }
 console.log("dsn: " + dsn);
 class App extends Component {
