@@ -5,7 +5,6 @@
   "homepage": ".",
   "dependencies": {
     "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
     "@tinymce/tinymce-react": "^3.12.6",
     "bootstrap": "^5.1.1",
@@ -19,10 +18,13 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
     "local": "NODE_ENV='local' react-scripts start",
     "eject": "react-scripts eject",
-    "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor"
+    "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor",
+    "test": "nyc --reporter=html --reporter=text --reporter=clover mocha --exit --timeout 10000",
+    "posttest": "npm run eslint",
+    "clean": "rm -rf node_modules package-lock.json",
+    "eslint": "eslint ."
   },
   "eslintConfig": {
     "extends": [
@@ -47,5 +49,14 @@
     "esversion": 8,
     "node": true,
     "eqeqeq": true
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.15.7",
+    "@testing-library/react": "^12.1.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-react": "^7.26.0",
+    "javascript-style-guide": "^1.0.1",
+    "mocha": "^9.1.1",
+    "nyc": "^15.1.0"
   }
 }
