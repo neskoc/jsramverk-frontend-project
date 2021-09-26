@@ -27,8 +27,8 @@ let dsn = config.azure_base_url;
 if (process.env.NODE_ENV === 'local') {
     dsn = "http://localhost:1337";
 }
-console.log("dsn: " + dsn);
-class App extends Component {
+// console.log("dsn: " + dsn);
+export class App extends Component {
     render() {
         return (
             <div className="App">
@@ -39,7 +39,7 @@ class App extends Component {
     }
 }
 
-class TinyEditor extends React.Component {
+export class TinyEditor extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -120,7 +120,7 @@ class TinyEditor extends React.Component {
                 let localDropDownItems = [];
 
                 docs.forEach(function(doc) {
-                    localDropDownItems.push(<DropdownItem key={doc._id}
+                    localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
                         onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                     that.docs[doc.docName] = doc.content;
                 });
@@ -138,8 +138,8 @@ class TinyEditor extends React.Component {
             .then(function (response) {
                 return response.json();
             }).then(function(result) {
-                console.log("result.data:");
-                console.log(result.data);
+                // console.log("result.data:");
+                // console.log(result.data);
                 that.docs = result.data;
             });
         return await Promise.resolve(that.docs);
@@ -174,13 +174,13 @@ class TinyEditor extends React.Component {
                     <NavbarBrand>Meny: </NavbarBrand>
                     <Nav className="mr-auto" navbar>
                         <NavItem>
-                            <NavLink className="App-button"
+                            <NavLink className="App-button" data-testid="Spara"
                                 onClick = {this.updateDocument}>
                             Spara
                             </NavLink>
                         </NavItem>
                         <NavItem>
-                            <NavLink className="App-button"
+                            <NavLink className="App-button" data-testid="Spara som"
                                 onClick = {this.toggleCollapsed}>
                             Spara som
                             </NavLink>
@@ -189,14 +189,14 @@ class TinyEditor extends React.Component {
                             <Form>
                                 <FormGroup>
                                     <Input type="text" name="docName" id="docName"
-                                        placeholder="Ange dokumentnamn"
+                                        placeholder="Ange dokumentnamn" data-testid="docName"
                                         value={this.state.tmpDocName} onChange={this.saveDocName}/>
                                     <Button onClick={this.updateDocument}>Spara dokumentet</Button>
                                 </FormGroup>
                             </Form>
                         </Collapse>
                         <UncontrolledDropdown nav inNavbar>
-                            <DropdownToggle nav caret>
+                            <DropdownToggle nav caret  name="Redigera fil">
                                 Redigera fil
                             </DropdownToggle>
                             <DropdownMenu right>
@@ -234,4 +234,6 @@ class TinyEditor extends React.Component {
     }
 }
 
+// export default { App, TinyEditor };
 export default App;
+// module.exports = { App, TinyEditor };
