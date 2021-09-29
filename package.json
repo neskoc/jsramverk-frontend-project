@@ -18,7 +18,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "CI=true react-scripts test --coverage",
+    "test": "CI=true react-scripts test --coverage --detectOpenHandles",
     "eject": "react-scripts eject",
     "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor",
     "posttest": "npm run eslint",
