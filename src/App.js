@@ -96,7 +96,7 @@ export class TinyEditor extends React.Component {
     async updateDocument() {
         const that = this;
 
-        console.log("updateDocument");
+        // console.log("updateDocument");
         this.setState({docName: this.state.tmpDocName});
         if (this.state.docName !== '') {
             let docArr = {},
@@ -175,16 +175,16 @@ export class TinyEditor extends React.Component {
 
     async handleKeyUp(value) {
         // this.setState({ value: await value.target.innerHTML });
-        console.log("value: ");
-        console.log(await value);
+        // console.log("value: ");
+        // console.log(await value);
         let data = {
             _id: this.state._id,
             client_id: ID,
             doc: value.target.innerHTML
         };
 
-        console.log("keyUp data: ");
-        console.log(data);
+        // console.log("keyUp data: ");
+        // console.log(data);
 
         const specKeys = ['Shift', 'Alt', 'Control', 'Tab', 'Meta'];
 
@@ -199,8 +199,8 @@ export class TinyEditor extends React.Component {
 
     componentDidMount() {
         socket.on("doc", (data) => {
-            console.log("callSocketOn data: ");
-            console.log(data);
+            // console.log("callSocketOn data: ");
+            // console.log(data);
             if (ID !== data.client_id) {
                 console.log("cupdate state.value: ");
                 this.setState({value: data.doc});
@@ -211,7 +211,7 @@ export class TinyEditor extends React.Component {
     render() {
         return (
             <>
-                {console.log("render")}
+                {/* console.log("render") */}
                 <Navbar color="light" light expand="md">
                     <NavbarBrand>Meny: </NavbarBrand>
                     <Nav className="mr-auto" navbar>
