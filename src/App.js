@@ -3,6 +3,7 @@
 "use strict";
 
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import {
     UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem,
     Button,
@@ -17,6 +18,7 @@ import {
     NavLink
 } from 'reactstrap';
 import { Editor } from '@tinymce/tinymce-react';
+import socketIOClient from "socket.io-client";
 
 import './App.css';
 
@@ -24,9 +26,17 @@ const config = require("./config/db/config.json");
 
 let dsn = config.azure_base_url;
 
-if (process.env.NODE_ENV === 'local') {
-    dsn = "http://localhost:1337";
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+
+    if (process.env.REACT_APP_LOCAL === 'true') {
+        dsn = "http://localhost:1337";
+    }
 }
+
+const socket = socketIOClient(dsn);
+const ID = '_' + Math.random().toString(36).substr(2, 9);
+
 // console.log("dsn: " + dsn);
 export class App extends Component {
     render() {
@@ -43,14 +53,15 @@ export class TinyEditor extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            value: '<p>Skriv din text här!</p>',
+            value: null,
             docName: '',
             tmpDocName: '',
             editorRef: null,
             isOpen: false,
             dropdownOpen: false,
             setDropdownOpen: false,
-            dropdownItems: []
+            dropdownItems: [],
+            _id: null
         };
         this.docs = {};
 
@@ -60,29 +71,32 @@ export class TinyEditor extends React.Component {
         this.loadDocument = this.loadDocument.bind(this);
         this.updateDocument = this.updateDocument.bind(this);
         this.handleEditorChange = this.handleEditorChange.bind(this);
+        this.handleKeyUp = this.handleKeyUp.bind(this);
         this.log = this.log.bind(this);
-        this.load = this.load.bind(this);
         this.toggle = this.toggle.bind(this);
         this.toggleCollapsed = this.toggleCollapsed.bind(this);
         this.fillDropdownItems = this.fillDropdownItems.bind(this);
     }
 
     async saveDocName(e) {
-        console.log(e.target.value);
         this.setState({tmpDocName: await e.target.value});
-        console.log(this.state.tmpDocName);
+        // console.log(this.state.tmpDocName);
     }
 
     async loadDocument(e) {
-        console.log(e.target.textContent);
-        this.setState({value: this.docs[e.target.textContent]});
+        // console.log(e.target.value);
+        this.setState({value: this.docs[await e.target.value].content});
         this.setState({docName: await e.target.textContent});
         this.setState({tmpDocName: this.state.docName});
+        this.setState({_id: this.docs[await e.target.value]._id});
+        console.log(this.state._id);
+        socket.emit("create", this.state._id);
     }
 
     async updateDocument() {
         const that = this;
 
+        console.log("updateDocument");
         this.setState({docName: this.state.tmpDocName});
         if (this.state.docName !== '') {
             let docArr = {},
@@ -119,9 +133,9 @@ export class TinyEditor extends React.Component {
             .then(function(docs) {
                 let localDropDownItems = [];
 
-                docs.forEach(function(doc) {
+                docs.forEach(function(doc, ix) {
                     localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
-                        onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
+                        value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                     that.docs[doc.docName] = doc.content;
                 });
                 return localDropDownItems;
@@ -159,17 +173,45 @@ export class TinyEditor extends React.Component {
         }
     }
 
-    load() {
-        this.setState({value: "<p>Set content!</p>"});
+    async handleKeyUp(value) {
+        // this.setState({ value: await value.target.innerHTML });
+        console.log("value: ");
+        console.log(await value);
+        let data = {
+            _id: this.state._id,
+            client_id: ID,
+            doc: value.target.innerHTML
+        };
+
+        console.log("keyUp data: ");
+        console.log(data);
+
+        const specKeys = ['Shift', 'Alt', 'Control', 'Tab', 'Meta'];
+
+        if (!(specKeys.includes(value.key))) {
+            socket.emit("doc", data);
+        }
     }
 
     handleEditorChange(value) {
         this.setState({ value: value });
     }
 
+    componentDidMount() {
+        socket.on("doc", (data) => {
+            console.log("callSocketOn data: ");
+            console.log(data);
+            if (ID !== data.client_id) {
+                console.log("cupdate state.value: ");
+                this.setState({value: data.doc});
+            }
+        });
+    }
+
     render() {
         return (
             <>
+                {console.log("render")}
                 <Navbar color="light" light expand="md">
                     <NavbarBrand>Meny: </NavbarBrand>
                     <Nav className="mr-auto" navbar>
@@ -206,12 +248,12 @@ export class TinyEditor extends React.Component {
                         </UncontrolledDropdown>
                     </Nav>
                 </Navbar>
-                {/* <button onClick={this.load}>Load</button> */}
                 <Editor
                     apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
                     onInit={(evt, editor) => this.setState({editorRef: editor})}
-                    initialValue={this.state.value}
+                    initialValue='<p>Skriv din text här!</p>'
                     value={this.state.value}
+                    onKeyUp={this.handleKeyUp}
                     onEditorChange={this.handleEditorChange}
                     init={{
                         height: 500,
@@ -233,6 +275,10 @@ export class TinyEditor extends React.Component {
         );
     }
 }
+
+TinyEditor.propTypes = {
+    value: PropTypes.string,
+};
 
 // export default { App, TinyEditor };
 export default App;

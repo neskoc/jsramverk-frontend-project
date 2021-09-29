@@ -6,6 +6,7 @@
   "dependencies": {
     "@tinymce/tinymce-react": "^3.12.6",
     "bootstrap": "^5.1.1",
+    "dotenv": "^10.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
@@ -18,7 +19,6 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "CI=true react-scripts test --coverage",
-    "local": "NODE_ENV='local' react-scripts start",
     "eject": "react-scripts eject",
     "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor",
     "posttest": "npm run eslint",
@@ -50,10 +50,10 @@
     "eqeqeq": true
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/user-event": "^12.8.3",
     "@babel/eslint-parser": "^7.15.7",
+    "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^12.1.0",
+    "@testing-library/user-event": "^12.8.3",
     "eslint": "^7.32.0",
     "eslint-plugin-react": "^7.26.0",
     "javascript-style-guide": "^1.0.1",
