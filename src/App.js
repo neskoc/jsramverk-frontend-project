@@ -22,7 +22,10 @@ import socketIOClient from "socket.io-client";
 
 import './App.css';
 
-const config = require("./config/db/config.json");
+let config = require("./config/db/config.json");
+
+config.api_key = process.env.API_KEY || config.api_key;
+config.azure_base_url = process.env.AZURE_BASE_URL || config.azure_base_url;
 
 let dsn = config.azure_base_url;
 

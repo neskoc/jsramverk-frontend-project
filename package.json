@@ -5,6 +5,7 @@
   "homepage": ".",
   "dependencies": {
     "@tinymce/tinymce-react": "^3.12.6",
+    "bcryptjs": "^2.4.3",
     "bootstrap": "^5.1.1",
     "dotenv": "^10.0.0",
     "react": "^17.0.2",
