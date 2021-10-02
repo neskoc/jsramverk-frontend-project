@@ -52,6 +52,172 @@ export class App extends Component {
     }
 }
 
+function validate(email, password) {
+    // true means invalid, so our conditions got reversed
+    return {
+        email: email.length === 0,
+        password: password.length === 0
+    };
+}
+class SignUpForm extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            email: "",
+            password: "",
+            touched: {
+                email: false,
+                password: false
+            }
+        };
+
+        this.handleEmailChange = this.handleEmailChange.bind(this);
+        this.handlePasswordChange = this.handlePasswordChange.bind(this);
+        this.handleBlur = this.handleBlur.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        this.canBeSubmitted = this.canBeSubmitted.bind(this);
+        this.loginUser = this.loginUser.bind(this);
+    }
+
+    handleEmailChange(evt) {
+        this.setState({ email: evt.target.value });
+    }
+
+    handlePasswordChange(evt)  {
+        this.setState({ password: evt.target.value });
+    }
+
+    handleBlur(field)  {
+        console.log(field);
+    }
+
+    async handleSubmit(evt) {
+        if (!this.canBeSubmitted()) {
+            evt.preventDefault();
+            return;
+        }
+        const { email, password } = this.state;
+
+        console.log(evt.target.name);
+        if (evt.target.name === 'login') {
+            await this.loginUser(email, password)
+                .then(() => {
+                    console.log(`Logged in with email: ${email} password: ${password}`);
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+        } else {
+            await this.registerUser(email, password)
+                .then(() => {
+                    console.log(`Signed up with email: ${email} password: ${password}`);
+                    this.loginUser(email, password);
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+        }
+    }
+
+    canBeSubmitted() {
+        const errors = validate(this.state.email, this.state.password);
+        const isDisabled = Object.keys(errors).some(x => errors[x]);
+
+        return !isDisabled;
+    }
+
+    async registerUser(email, password) {
+        const data = {
+            email: email,
+            password: password,
+            api_key: config.api_key
+        };
+
+        await fetch(`${dsn}/auth/register`, {
+            body: JSON.stringify(data),
+            headers: {
+                'content-type': 'application/json'
+            },
+            method: 'PUT'
+        })
+            .then(function () {
+                console.log("registered");
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+    }
+
+    async loginUser(email, password) {
+        let that = this;
+        const data = {
+            email: email,
+            password: password,
+            api_key: config.api_key
+        };
+
+        // console.log("data: ");
+        // console.log(JSON.stringify(data));
+        await fetch(`${dsn}/auth/login`, {
+            body: JSON.stringify(data),
+            headers: {
+                'content-type': 'application/json'
+            },
+            method: 'POST'
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (res) {
+                // console.log(res.data.token);
+                that.props.updateToken(res.data.token);
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+    }
+
+    render() {
+        const errors = validate(this.state.email, this.state.password);
+        const isDisabled = Object.keys(errors).some(x => errors[x]);
+        const shouldMarkError = field => {
+            const hasError = errors[field];
+            const shouldShow = this.state.touched[field];
+
+            return hasError ? shouldShow : false;
+        };
+
+        return (
+            <div className="form">
+                <label>
+                    E-post:
+                </label>
+                <input
+                    className={shouldMarkError("email") ? "error" : ""}
+                    type="text"
+                    value={this.state.email}
+                    onChange={this.handleEmailChange}
+                />
+                <label>
+                    Lösenord:
+                </label>
+                <input
+                    className={shouldMarkError("password") ? "error" : ""}
+                    type="password"
+                    value={this.state.password}
+                    onChange={this.handlePasswordChange}
+                />
+                <button onClick={this.handleSubmit}
+                    name="register" disabled={isDisabled}>
+                    Register
+                </button>
+                <button onClick={this.handleSubmit} name="login" disabled={isDisabled}>
+                    Login
+                </button>
+            </div>
+        );
+    }
+}
 export class TinyEditor extends React.Component {
     constructor(props) {
         super(props);
@@ -64,9 +230,14 @@ export class TinyEditor extends React.Component {
             dropdownOpen: false,
             setDropdownOpen: false,
             dropdownItems: [],
-            _id: null
+            isDocumentNew: true,
+            _id: null,
+            token: null,
+            email: null,
+            password: null
         };
         this.docs = {};
+        this.docNames = [];
 
         this.fillDropdownItems();
 
@@ -79,10 +250,22 @@ export class TinyEditor extends React.Component {
         this.toggle = this.toggle.bind(this);
         this.toggleCollapsed = this.toggleCollapsed.bind(this);
         this.fillDropdownItems = this.fillDropdownItems.bind(this);
+        this.updateToken = this.updateToken.bind(this);
+    }
+
+    async updateToken(token) {
+        await Promise.resolve(this.setState({ token: token}));
+        await this.fillDropdownItems();
+        // console.log(`updateToken: ${token}`);
     }
 
     async saveDocName(e) {
         this.setState({tmpDocName: await e.target.value});
+        if (this.docNames.includes(e.target.value)) {
+            this.setState({isDocumentNew: false});
+        } else {
+            this.setState({isDocumentNew: true});
+        }
         // console.log(this.state.tmpDocName);
     }
 
@@ -91,6 +274,7 @@ export class TinyEditor extends React.Component {
         this.setState({value: this.docs[await e.target.value].content});
         this.setState({docName: await e.target.textContent});
         this.setState({tmpDocName: this.state.docName});
+        this.setState({isDocumentNew: false});
         this.setState({_id: this.docs[await e.target.value]._id});
         console.log(this.state._id);
         socket.emit("create", this.state._id);
@@ -100,21 +284,39 @@ export class TinyEditor extends React.Component {
         const that = this;
 
         // console.log("updateDocument");
-        this.setState({docName: this.state.tmpDocName});
+        await Promise.resolve(this.setState({docName: this.state.tmpDocName}));
         if (this.state.docName !== '') {
+            /*
             let docArr = {},
                 data = {};
+            */
+            let fetchUrl = `${dsn}/mongo/update`;
+            const data = {
+                doc: {
+                    docName: this.state.docName,
+                    content: this.state.value
+                },
+                api_key: config.api_key
+            };
 
+            if (this.state.isDocumentNew) {
+                fetchUrl = `${dsn}/mongo/create`;
+            }
+
+            /*
             docArr["docName"] = this.state.docName;
             docArr["content"] = this.state.value;
             data["doc"] = docArr;
             data["api_key"] = config.api_key;
-            await fetch(`${dsn}/mongo/update`, {
+            */
+            console.log(fetchUrl);
+            await fetch(fetchUrl, {
                 body: JSON.stringify(data),
                 headers: {
-                    'content-type': 'application/json'
+                    'content-type': 'application/json',
+                    'x-access-token': this.state.token
                 },
-                method: 'POST'
+                method: 'PUT'
             })
                 .then(function (response) {
                     console.log("response status: " + response.status);
@@ -136,22 +338,31 @@ export class TinyEditor extends React.Component {
             .then(function(docs) {
                 let localDropDownItems = [];
 
+                that.docNames = [];
                 docs.forEach(function(doc, ix) {
                     localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
                         value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                     that.docs[doc.docName] = doc.content;
+                    that.docNames.push(doc.docName);
                 });
                 return localDropDownItems;
             })
             .then(function(items) {
                 that.setState({dropdownItems: items});
+            })
+            .catch(err => {
+                console.log(err);
             });
     }
 
     async getDocuments() {
         const that = this;
 
-        await fetch(`${dsn}/mongo/list?api_key=${config.api_key}`)
+        await fetch(`${dsn}/mongo/list?api_key=${config.api_key}`, {
+            headers: {
+                'x-access-token': this.state.token,
+            },
+        })
             .then(function (response) {
                 return response.json();
             }).then(function(result) {
@@ -212,68 +423,77 @@ export class TinyEditor extends React.Component {
     }
 
     render() {
+        let editor, navbar, message;
+
+        if (this.state.token) {
+            editor = <Editor
+                apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
+                onInit={(evt, editor) => this.setState({ editorRef: editor })}
+                initialValue='<p>Skriv din text här!</p>'
+                value={this.state.value}
+                onKeyUp={this.handleKeyUp}
+                onEditorChange={this.handleEditorChange}
+                init={{
+                    height: 500,
+                    menubar: false,
+                    plugins: [
+                        'advlist autolink lists link image charmap print preview anchor',
+                        'searchreplace visualblocks code fullscreen',
+                        'insertdatetime media table paste code help wordcount'
+                    ],
+                    toolbar: 'undo redo | formatselect | ' +
+                        'bold italic backcolor | alignleft aligncenter ' +
+                        'alignright alignjustify | bullist numlist outdent indent | ' +
+                        'removeformat | help',
+                    content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
+                        'font-size:14px }'
+                }}
+            />;
+            navbar = <Navbar color="light" light expand="md">
+                <NavbarBrand>Meny: </NavbarBrand>
+                <Nav className="mr-auto" navbar>
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="Spara"
+                            onClick = { this.updateDocument }>
+                        Spara
+                        </NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="Spara som"
+                            onClick = { this.toggleCollapsed }>
+                            Spara som
+                        </NavLink>
+                    </NavItem>
+                    <Collapse isOpen={this.state.isOpen} unmountOnExit={true} navbar>
+                        <Form>
+                            <FormGroup>
+                                <Input type="text" name="docName" id="docName"
+                                    placeholder="Ange dokumentnamn" data-testid="docName"
+                                    value={this.state.tmpDocName} onChange={this.saveDocName}/>
+                                <Button onClick={this.updateDocument}>Spara dokumentet</Button>
+                            </FormGroup>
+                        </Form>
+                    </Collapse>
+                    <UncontrolledDropdown nav inNavbar>
+                        <DropdownToggle nav caret  name="Redigera fil">
+                            Redigera fil
+                        </DropdownToggle>
+                        <DropdownMenu right>
+                            <DropdownItem header>Välj en fil från listan</DropdownItem>
+                            {this.state.dropdownItems}
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                </Nav>
+            </Navbar>;
+        } else {
+            message = <SignUpForm updateToken={this.updateToken}/>;
+        }
         return (
             <>
                 {/* console.log("render") */}
-                <Navbar color="light" light expand="md">
-                    <NavbarBrand>Meny: </NavbarBrand>
-                    <Nav className="mr-auto" navbar>
-                        <NavItem>
-                            <NavLink className="App-button" data-testid="Spara"
-                                onClick = {this.updateDocument}>
-                            Spara
-                            </NavLink>
-                        </NavItem>
-                        <NavItem>
-                            <NavLink className="App-button" data-testid="Spara som"
-                                onClick = {this.toggleCollapsed}>
-                            Spara som
-                            </NavLink>
-                        </NavItem>
-                        <Collapse isOpen={this.state.isOpen} unmountOnExit={true} navbar>
-                            <Form>
-                                <FormGroup>
-                                    <Input type="text" name="docName" id="docName"
-                                        placeholder="Ange dokumentnamn" data-testid="docName"
-                                        value={this.state.tmpDocName} onChange={this.saveDocName}/>
-                                    <Button onClick={this.updateDocument}>Spara dokumentet</Button>
-                                </FormGroup>
-                            </Form>
-                        </Collapse>
-                        <UncontrolledDropdown nav inNavbar>
-                            <DropdownToggle nav caret  name="Redigera fil">
-                                Redigera fil
-                            </DropdownToggle>
-                            <DropdownMenu right>
-                                <DropdownItem header>Välj en fil från listan</DropdownItem>
-                                {this.state.dropdownItems}
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
-                    </Nav>
-                </Navbar>
-                <Editor
-                    apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
-                    onInit={(evt, editor) => this.setState({editorRef: editor})}
-                    initialValue='<p>Skriv din text här!</p>'
-                    value={this.state.value}
-                    onKeyUp={this.handleKeyUp}
-                    onEditorChange={this.handleEditorChange}
-                    init={{
-                        height: 500,
-                        menubar: false,
-                        plugins: [
-                            'advlist autolink lists link image charmap print preview anchor',
-                            'searchreplace visualblocks code fullscreen',
-                            'insertdatetime media table paste code help wordcount'
-                        ],
-                        toolbar: 'undo redo | formatselect | ' +
-                            'bold italic backcolor | alignleft aligncenter ' +
-                            'alignright alignjustify | bullist numlist outdent indent | ' +
-                            'removeformat | help',
-                        content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
-                            'font-size:14px }'
-                    }}
-                />
+                { message }
+                { navbar }
+                { editor }
             </>
         );
     }
