@@ -334,6 +334,9 @@ export class TinyEditor extends React.Component {
     async fillDropdownItems() {
         const that = this;
 
+        if (!this.state.token) {
+            return;
+        }
         await this.getDocuments()
             .then(function(docs) {
                 let localDropDownItems = [];
@@ -365,7 +368,8 @@ export class TinyEditor extends React.Component {
         })
             .then(function (response) {
                 return response.json();
-            }).then(function(result) {
+            })
+            .then(function(result) {
                 // console.log("result.data:");
                 // console.log(result.data);
                 that.docs = result.data;
