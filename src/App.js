@@ -252,7 +252,7 @@ export class TinyEditor extends React.Component {
         this.docs = {};
         this.docNames = [];
 
-        this.fillDropdownItems();
+        // this.fillDropdownItems();
 
         this.saveDocName = this.saveDocName.bind(this);
         this.loadDocument = this.loadDocument.bind(this);
@@ -264,6 +264,7 @@ export class TinyEditor extends React.Component {
         this.toggleCollapsed = this.toggleCollapsed.bind(this);
         this.fillDropdownItems = this.fillDropdownItems.bind(this);
         this.updateToken = this.updateToken.bind(this);
+        this.export2Pdf = this.export2Pdf.bind(this);
     }
 
     async updateToken(token, email) {
@@ -371,7 +372,7 @@ export class TinyEditor extends React.Component {
             });
     }
 
-    async getDocuments() {
+    /* async getDocuments() {
         const that = this;
 
         await fetch(`${dsn}/mongo/list?api_key=${config.api_key}`, {
@@ -388,7 +389,7 @@ export class TinyEditor extends React.Component {
                 that.docs = result.data;
             });
         return await Promise.resolve(that.docs);
-    }
+    } */
 
     async getGraphQLDocuments() {
         const that = this;
@@ -422,6 +423,63 @@ export class TinyEditor extends React.Component {
                 console.log("result.data:");
                 console.log(result.data);
                 that.docs = result.data.docs;
+            });
+        return await Promise.resolve(that.docs);
+    }
+
+    async export2Pdf() {
+        const that = this;
+        const content = this.state.value;
+
+        // console.log("email: ", email);
+        await fetch(`${dsn}/htmlToPdf`, {
+            method: 'POST',
+            headers: {
+                'x-access-token': this.state.token,
+                'api_key': config.api_key,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                content: { content }
+            })
+        })
+            .then(response => response.body)
+            .then(rs => {
+                const reader = rs.getReader();
+
+                return new ReadableStream({
+                    async start(controller) {
+                        // eslint-disable-next-line no-constant-condition
+                        while (true) {
+                            const { done, value } = await reader.read();
+
+                            if (done) {
+                                break;
+                            }
+                            controller.enqueue(value);
+                        }
+                        controller.close();
+                        reader.releaseLock();
+                    }
+                });
+            })
+            .then(stream => new Response(stream))
+            .then(response => response.blob())
+            .then(blob => URL.createObjectURL(blob, { type: "application/pdf" }))
+            .then(url => {
+                let link = document.createElement("a");
+
+                link.href = url;
+                link.download = "ConvertedFile.pdf";
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+
+                link.click();
+                setTimeout(function () {
+                    window.URL.revokeObjectURL(link);
+                }, 200);
             });
         return await Promise.resolve(that.docs);
     }
@@ -536,6 +594,12 @@ export class TinyEditor extends React.Component {
                             {this.state.dropdownItems}
                         </DropdownMenu>
                     </UncontrolledDropdown>
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="Export2Pdf"
+                            onClick = { this.export2Pdf }>
+                        Export2Pdf
+                        </NavLink>
+                    </NavItem>
                 </Nav>
             </Navbar>;
         } else {
