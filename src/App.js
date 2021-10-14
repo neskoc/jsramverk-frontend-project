@@ -17,6 +17,11 @@ import {
     NavItem,
     NavLink
 } from 'reactstrap';
+import {
+    ApolloClient,
+    InMemoryCache,
+    ApolloProvider
+} from "@apollo/client";
 import { Editor } from '@tinymce/tinymce-react';
 import socketIOClient from "socket.io-client";
 
@@ -37,6 +42,11 @@ if (process.env.NODE_ENV !== 'production') {
     }
 }
 
+const client = new ApolloClient({
+    uri: `${dsn}/graphql`,
+    cache: new InMemoryCache()
+});
+
 const socket = socketIOClient(dsn);
 const ID = '_' + Math.random().toString(36).substr(2, 9);
 
@@ -44,6 +54,9 @@ const ID = '_' + Math.random().toString(36).substr(2, 9);
 export class App extends Component {
     render() {
         return (
+            <ApolloProvider client={client}>
+                <App />
+            </ApolloProvider>,
             <div className="App">
                 <h1>Text editor baserad på React and TinyMCE</h1>
                 <TinyEditor />
@@ -170,7 +183,7 @@ class SignUpForm extends React.Component {
             })
             .then(function (res) {
                 // console.log(res.data.token);
-                that.props.updateToken(res.data.token);
+                that.props.updateToken(res.data.token, email);
             })
             .catch((err) => {
                 console.log(err);
@@ -253,7 +266,8 @@ export class TinyEditor extends React.Component {
         this.updateToken = this.updateToken.bind(this);
     }
 
-    async updateToken(token) {
+    async updateToken(token, email) {
+        await Promise.resolve(this.setState({ email: email}));
         await Promise.resolve(this.setState({ token: token}));
         await this.fillDropdownItems();
         // console.log(`updateToken: ${token}`);
@@ -303,12 +317,6 @@ export class TinyEditor extends React.Component {
                 fetchUrl = `${dsn}/mongo/create`;
             }
 
-            /*
-            docArr["docName"] = this.state.docName;
-            docArr["content"] = this.state.value;
-            data["doc"] = docArr;
-            data["api_key"] = config.api_key;
-            */
             console.log(fetchUrl);
             await fetch(fetchUrl, {
                 body: JSON.stringify(data),
@@ -335,14 +343,20 @@ export class TinyEditor extends React.Component {
         const that = this;
 
         if (!this.state.token) {
+            console.log("Mo token");
             return;
+        } else {
+            console.log("Token: ", this.state.token);
         }
-        await this.getDocuments()
+
+        await this.getGraphQLDocuments()
             .then(function(docs) {
+                // console.log("getDocs: ");
+                // console.log(docs.docs);
                 let localDropDownItems = [];
 
                 that.docNames = [];
-                docs.forEach(function(doc, ix) {
+                docs.docs.forEach(function(doc, ix) {
                     localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
                         value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                     that.docs[doc.docName] = doc.content;
@@ -372,6 +386,42 @@ export class TinyEditor extends React.Component {
             .then(function(result) {
                 // console.log("result.data:");
                 // console.log(result.data);
+                that.docs = result.data;
+            });
+        return await Promise.resolve(that.docs);
+    }
+
+    async getGraphQLDocuments() {
+        const that = this;
+        const email = this.state.email;
+        const query = `query Docs($email: String!) {
+            docs(email: $email) {
+                _id
+                docName
+                content
+            }
+        }`;
+
+        // console.log("email: ", email);
+        await fetch(`${dsn}/graphql`, {
+            method: 'POST',
+            headers: {
+                'x-access-token': this.state.token,
+                'api_key': config.api_key,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                query,
+                variables: { email }
+            })
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function(result) {
+                console.log("result.data:");
+                console.log(result.data);
                 that.docs = result.data;
             });
         return await Promise.resolve(that.docs);
@@ -420,7 +470,7 @@ export class TinyEditor extends React.Component {
             // console.log("callSocketOn data: ");
             // console.log(data);
             if (ID !== data.client_id) {
-                console.log("cupdate state.value: ");
+                console.log("update state.value: ");
                 this.setState({value: data.doc});
             }
         });
