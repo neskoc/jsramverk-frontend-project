@@ -284,7 +284,6 @@ export class TinyEditor extends React.Component {
     }
 
     async loadDocument(e) {
-        // console.log(e.target.value);
         this.setState({value: this.docs[await e.target.value].content});
         this.setState({docName: await e.target.textContent});
         this.setState({tmpDocName: this.state.docName});
@@ -356,7 +355,7 @@ export class TinyEditor extends React.Component {
                 let localDropDownItems = [];
 
                 that.docNames = [];
-                docs.docs.forEach(function(doc, ix) {
+                docs.forEach(function(doc, ix) {
                     localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
                         value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                     that.docs[doc.docName] = doc.content;
@@ -422,7 +421,7 @@ export class TinyEditor extends React.Component {
             .then(function(result) {
                 console.log("result.data:");
                 console.log(result.data);
-                that.docs = result.data;
+                that.docs = result.data.docs;
             });
         return await Promise.resolve(that.docs);
     }
