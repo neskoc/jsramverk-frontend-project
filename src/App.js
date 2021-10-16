@@ -26,6 +26,7 @@ import { Editor } from '@tinymce/tinymce-react';
 import socketIOClient from "socket.io-client";
 
 import './App.css';
+import sendEmail from "./mailgun.js";
 
 let config = require("./config/db/config.json");
 
@@ -505,9 +506,10 @@ export class TinyEditor extends React.Component {
     }
 
     async sendInvitation() {
-        const mailgun = require('./mailgun');
-
-        await mailgun.sendInvitation(this.state.email);
+        await sendEmail.sendInvitation(this.state.email)
+            .catch(function (error) {
+                console.log(error);
+            });
     }
 
     componentDidMount() {

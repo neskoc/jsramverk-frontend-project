@@ -5,25 +5,29 @@
 const config = require("./config/db/config.json");
 const mailgun = require("mailgun-js");
 
+const sendEmail = {
+    sendInvitation: async (email) => {
+        const DOMAIN = config.mailgun_domain;
+        const mg = mailgun({apiKey: config.mailgun_api_key, domain: DOMAIN});
+        const fullEmail = `email <${email}>`;
 
-module.exports = { sendInvitation };
+        const data = {
+            from: 'Nenad Cuturic <cnesko@e.email>',
+            to: fullEmail,
+            subject: 'Editor invitation',
+            text: `Please register here: ${config.client_url}`,
+        };
 
-async function sendInvitation(email) {
-    const DOMAIN = config.mailgun_domain;
-    const mg = mailgun({apiKey: config.mailgun_api_key, domain: DOMAIN});
-    const fullEmail = `email <${email}>`;
+        await mg.messages().send(data, function (error, body) {
+            if (error) {
+                throw new Error(error);
+            }
 
-    const data = {
-        from: 'Nenad Cuturic <cnesko@e.email>',
-        to: fullEmail,
-        subject: 'Editor invitation',
-        text: `Please register here: ${config.client_url}`,
-    };
+            console.log(body);
+            alert("Invitation sent!");
+        });
+    }
 
-    await mg.messages().send(data, function (error, body) {
-        console.log(body);
-        alert("Invitation sent!");
-    }).catch(function (error) {
-        console.log(error);
-    });
-}
+};
+
+export default sendEmail;
