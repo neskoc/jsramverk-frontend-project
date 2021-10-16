@@ -20,11 +20,11 @@ const sendEmail = {
 
         await mg.messages().send(data, function (error, body) {
             if (error) {
-                throw new Error(error);
+                alert(error);
+            } else {
+                console.log(body);
+                alert("Invitation sent!");
             }
-
-            console.log(body);
-            alert("Invitation sent!");
         });
     }
 
