@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "10.2.2",
+  "version": "10.2.1",
   "private": true,
   "homepage": ".",
   "dependencies": {
@@ -27,6 +27,7 @@
     "build": "react-scripts build",
     "test": "CI=true react-scripts test --coverage --detectOpenHandles",
     "eject": "react-scripts eject",
+    "old_deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor",
     "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor-project",
     "posttest": "npm run eslint",
     "clean": "rm -rf node_modules package-lock.json",

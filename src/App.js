@@ -149,11 +149,14 @@ export class TinyEditor extends React.Component {
             const data = {
                 doc: {
                     docName: this.state.docName,
-                    content: this.state.value
+                    content: this.state.value,
+                    type: this.state.type,
                 },
                 api_key: config.api_key
             };
 
+            console.log("data (before save):");
+            console.log(data);
             if (this.state.isDocumentNew) {
                 fetchUrl = `${dsn}/mongo/create`;
             }
@@ -166,15 +169,13 @@ export class TinyEditor extends React.Component {
                     'x-access-token': this.state.token
                 },
                 method: 'PUT'
-            })
-                .then(function (response) {
-                    console.log("response status: " + response.status);
-                    that.fillDropdownItems();
-                    return response;
-                })
-                .catch((e) => {
-                    console.log(e);
-                });
+            }).then(function (response) {
+                console.log("response status: " + response.status);
+                that.fillDropdownItems();
+                return response;
+            }).catch((e) => {
+                console.log(e);
+            });
         } else {
             this.setState({isOpen: true});
         }
@@ -318,9 +319,18 @@ export class TinyEditor extends React.Component {
         this.setState({isOpen: !this.state.isOpen});
     }
 
-    toggleEditorType() {
+    async toggleEditorType() {
         this.fillDropdownItems();
-        this.setState({type: (this.state.type === 'text' ? 'code' : 'text') });
+        await Promise.resolve(
+            this.setState({type: (this.state.type === 'text' ? 'code' : 'text') })
+        ).then(() => {
+            console.log(this.state.type);
+            if (this.state.type === 'code') {
+                this.setState({ value: '// CodeMirror editor\n' });
+            } else {
+                this.setState({ value: '<p>Skriv din text här!</p>' });
+            }
+        });
     }
 
     log() {
@@ -333,10 +343,15 @@ export class TinyEditor extends React.Component {
         // this.setState({ value: await value.target.innerHTML });
         // console.log("value: ");
         // console.log(await value);
+        let doc =  value.target.innerHTML;
+
+        if (this.state.type === 'code') {
+            doc = this.state.value;
+        }
         let data = {
             _id: this.state._id,
             client_id: ID,
-            doc: value.target.innerHTML
+            doc: doc,
         };
 
         // console.log("keyUp data: ");
@@ -377,12 +392,12 @@ export class TinyEditor extends React.Component {
         if (this.state.token) {
             if (this.state.type === 'text') {
                 editor = <Editor
-                    apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
-                    onInit={(evt, editor) => this.setState({ editorRef: editor })}
-                    initialValue='<p>Skriv din text här!</p>'
-                    value={this.state.value}
-                    onKeyUp={this.handleKeyUp}
-                    onEditorChange={this.handleEditorChange}
+                    apiKey = "6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
+                    onInit = {(evt, editor) => this.setState({ editorRef: editor })}
+                    initialValue = '<p>Skriv din text här!</p>'
+                    value = { this.state.value }
+                    onKeyUp = { this.handleKeyUp }
+                    onEditorChange = { this.handleEditorChange }
                     init={{
                         height: 500,
                         menubar: false,
@@ -401,14 +416,15 @@ export class TinyEditor extends React.Component {
                 />;
             } else {
                 editor = <CodeMirror
-                    className="editor"
-                    value = "// CodeMirror Editor"
+                    className = "editor"
+                    value = { this.state.value }
                     height = "500px"
-                    textAlign = 'left'
                     extensions={[javascript({ jsx: true })]}
+                    onKeyUp = { this.handleKeyUp }
                     // eslint-disable-next-line no-unused-vars
                     onChange={(value, viewUpdate) => {
                         console.log('value:', value);
+                        this.handleEditorChange(value);
                     }}
                 />;
             }
