@@ -24,6 +24,8 @@ import {
 } from "@apollo/client";
 import { Editor } from '@tinymce/tinymce-react';
 import socketIOClient from "socket.io-client";
+import CodeMirror from '@uiw/react-codemirror';
+import { javascript } from '@codemirror/lang-javascript';
 
 import './App.css';
 import sendEmail from "./mailgun.js";
@@ -60,7 +62,7 @@ export class App extends Component {
                 <App />
             </ApolloProvider>,
             <div className="App">
-                <h1>Text editor baserad på React and TinyMCE</h1>
+                <h1>Text editor baserad på React, TinyMCE och CodeMirror</h1>
                 <TinyEditor />
             </div>
         );
@@ -73,6 +75,7 @@ export class TinyEditor extends React.Component {
         this.state = {
             value: null,
             docName: '',
+            type: "text",
             tmpDocName: '',
             editorRef: null,
             isOpen: false,
@@ -102,6 +105,7 @@ export class TinyEditor extends React.Component {
         this.updateToken = this.updateToken.bind(this);
         this.export2Pdf = this.export2Pdf.bind(this);
         this.sendInvitation = this.sendInvitation.bind(this);
+        this.toggleEditorType = this.toggleEditorType.bind(this);
     }
 
     async updateToken(token, email) {
@@ -194,10 +198,13 @@ export class TinyEditor extends React.Component {
 
                 that.docNames = [];
                 docs.forEach(function(doc, ix) {
-                    localDropDownItems.push(<DropdownItem key={doc._id} data-testid={doc.docName}
-                        value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
-                    that.docs[doc.docName] = doc.content;
-                    that.docNames.push(doc.docName);
+                    if (doc.type === that.state.type) {
+                        localDropDownItems.push(<DropdownItem key={doc._id}
+                            data-testid={doc.docName}
+                            value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
+                        that.docs[doc.docName] = doc.content;
+                        that.docNames.push(doc.docName);
+                    }
                 });
                 return localDropDownItems;
             })
@@ -216,6 +223,7 @@ export class TinyEditor extends React.Component {
             docs(email: $email) {
                 _id
                 docName
+                type
                 content
             }
         }`;
@@ -310,6 +318,11 @@ export class TinyEditor extends React.Component {
         this.setState({isOpen: !this.state.isOpen});
     }
 
+    toggleEditorType() {
+        this.fillDropdownItems();
+        this.setState({type: (this.state.type === 'text' ? 'code' : 'text') });
+    }
+
     log() {
         if (this.state.editorRef) {
             console.log(this.state.editorRef.getContent());
@@ -362,29 +375,43 @@ export class TinyEditor extends React.Component {
         let editor, navbar, message;
 
         if (this.state.token) {
-            editor = <Editor
-                apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
-                onInit={(evt, editor) => this.setState({ editorRef: editor })}
-                initialValue='<p>Skriv din text här!</p>'
-                value={this.state.value}
-                onKeyUp={this.handleKeyUp}
-                onEditorChange={this.handleEditorChange}
-                init={{
-                    height: 500,
-                    menubar: false,
-                    plugins: [
-                        'advlist autolink lists link image charmap print preview anchor',
-                        'searchreplace visualblocks code fullscreen',
-                        'insertdatetime media table paste code help wordcount'
-                    ],
-                    toolbar: 'undo redo | formatselect | ' +
-                        'bold italic backcolor | alignleft aligncenter ' +
-                        'alignright alignjustify | bullist numlist outdent indent | ' +
-                        'removeformat | help',
-                    content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
-                        'font-size:14px }'
-                }}
-            />;
+            if (this.state.type === 'text') {
+                editor = <Editor
+                    apiKey="6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
+                    onInit={(evt, editor) => this.setState({ editorRef: editor })}
+                    initialValue='<p>Skriv din text här!</p>'
+                    value={this.state.value}
+                    onKeyUp={this.handleKeyUp}
+                    onEditorChange={this.handleEditorChange}
+                    init={{
+                        height: 500,
+                        menubar: false,
+                        plugins: [
+                            'advlist autolink lists link image charmap print preview anchor',
+                            'searchreplace visualblocks code fullscreen',
+                            'insertdatetime media table paste code help wordcount'
+                        ],
+                        toolbar: 'undo redo | formatselect | ' +
+                            'bold italic backcolor | alignleft aligncenter ' +
+                            'alignright alignjustify | bullist numlist outdent indent | ' +
+                            'removeformat | help',
+                        content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
+                            'font-size:14px }'
+                    }}
+                />;
+            } else {
+                editor = <CodeMirror
+                    className="editor"
+                    value = "// CodeMirror Editor"
+                    height = "500px"
+                    textAlign = 'left'
+                    extensions={[javascript({ jsx: true })]}
+                    // eslint-disable-next-line no-unused-vars
+                    onChange={(value, viewUpdate) => {
+                        console.log('value:', value);
+                    }}
+                />;
+            }
             navbar = <Navbar color="light" light expand="md">
                 <NavbarBrand>Meny: </NavbarBrand>
                 <Nav className="mr-auto" navbar>
@@ -429,6 +456,12 @@ export class TinyEditor extends React.Component {
                         <NavLink className="App-button" data-testid="sendInvitation"
                             onClick = { this.sendInvitation }>
                         Send invitation
+                        </NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="EditorType"
+                            onClick = { this.toggleEditorType }>
+                            { this.state.type }
                         </NavLink>
                     </NavItem>
                 </Nav>
