@@ -265,6 +265,7 @@ export class TinyEditor extends React.Component {
         this.fillDropdownItems = this.fillDropdownItems.bind(this);
         this.updateToken = this.updateToken.bind(this);
         this.export2Pdf = this.export2Pdf.bind(this);
+        this.sendInvitation = this.sendInvitation.bind(this);
     }
 
     async updateToken(token, email) {
@@ -371,25 +372,6 @@ export class TinyEditor extends React.Component {
                 console.log(err);
             });
     }
-
-    /* async getDocuments() {
-        const that = this;
-
-        await fetch(`${dsn}/mongo/list?api_key=${config.api_key}`, {
-            headers: {
-                'x-access-token': this.state.token,
-            },
-        })
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function(result) {
-                // console.log("result.data:");
-                // console.log(result.data);
-                that.docs = result.data;
-            });
-        return await Promise.resolve(that.docs);
-    } */
 
     async getGraphQLDocuments() {
         const that = this;
@@ -522,6 +504,12 @@ export class TinyEditor extends React.Component {
         this.setState({ value: value });
     }
 
+    async sendInvitation() {
+        const mailgun = require('./mailgun');
+
+        await mailgun.sendInvitation(this.state.email);
+    }
+
     componentDidMount() {
         socket.on("doc", (data) => {
             // console.log("callSocketOn data: ");
@@ -598,6 +586,12 @@ export class TinyEditor extends React.Component {
                         <NavLink className="App-button" data-testid="Export2Pdf"
                             onClick = { this.export2Pdf }>
                         Export2Pdf
+                        </NavLink>
+                    </NavItem>
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="sendInvitation"
+                            onClick = { this.sendInvitation }>
+                        Send invitation
                         </NavLink>
                     </NavItem>
                 </Nav>
