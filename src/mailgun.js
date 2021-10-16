@@ -23,5 +23,7 @@ async function sendInvitation(email) {
     await mg.messages().send(data, function (error, body) {
         console.log(body);
         alert("Invitation sent!");
+    }).catch(function (error) {
+        console.log(error);
     });
 }
