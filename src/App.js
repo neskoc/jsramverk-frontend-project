@@ -30,6 +30,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import './App.css';
 import sendEmail from "./mailgun.js";
 import SignUpForm from './signupForm.js';
+import execjs from './exec.js';
 
 let config = require("./config/db/config.json");
 
@@ -106,6 +107,12 @@ export class TinyEditor extends React.Component {
         this.export2Pdf = this.export2Pdf.bind(this);
         this.sendInvitation = this.sendInvitation.bind(this);
         this.toggleEditorType = this.toggleEditorType.bind(this);
+        this.execjs = this.execjs.bind(this);
+    }
+
+    async execjs() {
+        await execjs(this.state.value)
+            .catch(err => console.error(err));
     }
 
     async updateToken(token, email) {
@@ -428,6 +435,17 @@ export class TinyEditor extends React.Component {
                     }}
                 />;
             }
+            let execButton = '';
+
+            if (this.state.type === 'code') {
+                execButton =
+                    <NavItem>
+                        <NavLink className="App-button" data-testid="ExecJS"
+                            onClick = { this.execjs }>
+                            ExecJS
+                        </NavLink>
+                    </NavItem>;
+            }
             navbar = <Navbar color="light" light expand="md">
                 <NavbarBrand>Meny: </NavbarBrand>
                 <Nav className="mr-auto" navbar>
@@ -480,6 +498,7 @@ export class TinyEditor extends React.Component {
                             { this.state.type }
                         </NavLink>
                     </NavItem>
+                    { execButton }
                 </Nav>
             </Navbar>;
         } else {

@@ -3,5 +3,6 @@
     "azure_base_url":  "https://jsramverk-editor-necu20.azurewebsites.net",
     "client_url":      "http://www.student.bth.se/~necu20/editor/",
     "mailgun_domain":  "sandbox47c34e86fcbc4a75b1ac8d7ab95909d5.mailgun.org",
-    "mailgun_api_key": "dc332b91d3703161517a8baf630f938c-2ac825a1-2bc52f5b"
+    "mailgun_api_key": "dc332b91d3703161517a8baf630f938c-2ac825a1-2bc52f5b",
+    "execjs_url":      "http://execjs.emilfolino.se/code"
 }
