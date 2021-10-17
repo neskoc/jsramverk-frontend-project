@@ -7,8 +7,8 @@ const config = require("./config/db/config.json");
 export default async function execjs(code) {
     const execjsUrl = config.execjs_url;
     const data = {
-        code: btoa(code),
-        // code: code.toString('base64')
+        // code: btoa(code),
+        code: Buffer.from(code).toString('base64')
     };
 
     console.log('data');
@@ -22,8 +22,8 @@ export default async function execjs(code) {
     }).then(function (response) {
         return response.json();
     }).then(function(result) {
-        let decodedOutput = atob(result.data);
-        // let decodedOutput = Buffer.from(result.data, 'base64');
+        // let decodedOutput = atob(result.data);
+        const decodedOutput = Buffer.from(result.data, 'base64').toString('utf-8');
 
         console.log(decodedOutput); // outputs: hej
     });
