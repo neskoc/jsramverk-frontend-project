@@ -30,6 +30,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import './App.css';
 import sendEmail from "./mailgun.js";
 import SignUpForm from './signupForm.js';
+import Comment from './comment.js';
 import execjs from './exec.js';
 
 let config = require("./config/db/config.json");
@@ -83,11 +84,13 @@ export class TinyEditor extends React.Component {
             dropdownOpen: false,
             setDropdownOpen: false,
             dropdownItems: [],
+            commentItems: [],
             isDocumentNew: true,
             _id: null,
             token: null,
             email: null,
-            password: null
+            password: null,
+            maxId: 0,
         };
         this.docs = {};
         this.docNames = [];
@@ -133,12 +136,35 @@ export class TinyEditor extends React.Component {
     }
 
     async loadDocument(e) {
-        this.setState({value: this.docs[await e.target.value].content});
+        const doc = this.docs[await e.target.value];
+
+        this.setState({value: doc.content});
         this.setState({docName: await e.target.textContent});
         this.setState({tmpDocName: this.state.docName});
         this.setState({isDocumentNew: false});
-        this.setState({_id: this.docs[await e.target.value]._id});
-        console.log(this.state._id);
+        this.setState({_id: doc._id});
+        if (doc.comments) {
+            const comments = [];
+
+            doc.comments.forEach(function(comment) {
+                let commentObj = {};
+
+                commentObj.id = comment.id;
+                commentObj.comment = comment.comment;
+                comments.push(commentObj);
+            });
+
+            const localCommentItems = [];
+
+            comments.forEach( (comment) => {
+                localCommentItems.push(
+                    <Comment key={comment.id} id={comment.id} comment={comment.comment} />
+                );
+            });
+            console.log(localCommentItems);
+            this.setState({ commentItems: localCommentItems });
+        }
+        // console.log(this.state._id);
         socket.emit("create", this.state._id);
     }
 
@@ -162,13 +188,13 @@ export class TinyEditor extends React.Component {
                 api_key: config.api_key
             };
 
-            console.log("data (before save):");
-            console.log(data);
+            // console.log("data (before save):");
+            // console.log(data);
             if (this.state.isDocumentNew) {
                 fetchUrl = `${dsn}/mongo/create`;
             }
 
-            console.log(fetchUrl);
+            // console.log(fetchUrl);
             await fetch(fetchUrl, {
                 body: JSON.stringify(data),
                 headers: {
@@ -177,7 +203,7 @@ export class TinyEditor extends React.Component {
                 },
                 method: 'PUT'
             }).then(function (response) {
-                console.log("response status: " + response.status);
+                // console.log("response status: " + response.status);
                 that.fillDropdownItems();
                 return response;
             }).catch((e) => {
@@ -192,11 +218,11 @@ export class TinyEditor extends React.Component {
         const that = this;
 
         if (!this.state.token) {
-            console.log("Mo token");
+            // console.log("Mo token");
             return;
-        } else {
+        }/*  else {
             console.log("Token: ", this.state.token);
-        }
+        } */
 
         await this.getGraphQLDocuments()
             .then(function(docs) {
@@ -233,6 +259,10 @@ export class TinyEditor extends React.Component {
                 docName
                 type
                 content
+                comments {
+                    id
+                    comment
+                }
             }
         }`;
 
@@ -254,8 +284,8 @@ export class TinyEditor extends React.Component {
                 return response.json();
             })
             .then(function(result) {
-                console.log("result.data:");
-                console.log(result.data);
+                // console.log("result.data:");
+                // console.log(result.data);
                 that.docs = result.data.docs;
             });
         return await Promise.resolve(that.docs);
@@ -394,7 +424,7 @@ export class TinyEditor extends React.Component {
     }
 
     render() {
-        let editor, navbar, message;
+        let editor, navbar, comments, message;
 
         if (this.state.token) {
             if (this.state.type === 'text') {
@@ -409,14 +439,29 @@ export class TinyEditor extends React.Component {
                         height: 500,
                         menubar: false,
                         plugins: [
-                            'advlist autolink lists link image charmap print preview anchor',
+                            'advlist autolink code lists link image charmap print preview anchor',
                             'searchreplace visualblocks code fullscreen',
                             'insertdatetime media table paste code help wordcount'
                         ],
                         toolbar: 'undo redo | formatselect | ' +
                             'bold italic backcolor | alignleft aligncenter ' +
                             'alignright alignjustify | bullist numlist outdent indent | ' +
-                            'removeformat | help',
+                            'removeformat | kommentera | help',
+                        setup: function (editor) {
+                            editor.ui.registry.addButton('kommentera', {
+                                text: 'Kommentera',
+                                icon: 'bookmark',
+                                tooltip: 'Kommentera markerad text',
+                                onAction: function () {
+                                    editor.focus();
+                                    if (editor.selection.getContent().length) {
+                                        editor.selection.setContent(
+                                            "<mark>" + editor.selection.getContent() + '</mark>'
+                                        );
+                                    }
+                                }
+                            });
+                        },
                         content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
                             'font-size:14px }'
                     }}
@@ -501,6 +546,7 @@ export class TinyEditor extends React.Component {
                     { execButton }
                 </Nav>
             </Navbar>;
+            comments = this.state.commentItems;
         } else {
             message = <SignUpForm updateToken={this.updateToken}/>;
         }
@@ -510,6 +556,7 @@ export class TinyEditor extends React.Component {
                 { message }
                 { navbar }
                 { editor }
+                { comments }
             </>
         );
     }

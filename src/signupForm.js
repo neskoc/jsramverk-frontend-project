@@ -66,16 +66,16 @@ export default class SignUpForm extends Component {
         console.log(evt.target.name);
         if (evt.target.name === 'login') {
             await this.loginUser(email, password)
-                .then(() => {
-                    console.log(`Logged in with email: ${email} password: ${password}`);
-                })
+                // .then(() => {
+                //     console.log(`Logged in with email: ${email} password: ${password}`);
+                // })
                 .catch(err => {
                     console.error(err);
                 });
         } else {
             await this.registerUser(email, password)
                 .then(() => {
-                    console.log(`Signed up with email: ${email} password: ${password}`);
+                    // console.log(`Signed up with email: ${email} password: ${password}`);
                     this.loginUser(email, password);
                 })
                 .catch(err => {
