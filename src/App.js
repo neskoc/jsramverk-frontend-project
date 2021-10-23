@@ -4,6 +4,7 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+// import { unmountComponentAtNode } from 'react-dom';
 import {
     UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem,
     Button,
@@ -111,6 +112,8 @@ export class TinyEditor extends React.Component {
         this.sendInvitation = this.sendInvitation.bind(this);
         this.toggleEditorType = this.toggleEditorType.bind(this);
         this.execjs = this.execjs.bind(this);
+        this.handleCommentDelete = this.handleCommentDelete.bind(this);
+        this.prepareComments = this.prepareComments.bind(this);
     }
 
     async execjs() {
@@ -135,6 +138,50 @@ export class TinyEditor extends React.Component {
         // console.log(this.state.tmpDocName);
     }
 
+    async handleCommentDelete(event) {
+        const id = event.currentTarget.id.slice(7);
+
+        let doc;
+        // const doc = this.docs.filter(doc => doc.docName === this.state.docName)[0];
+
+        // console.log(this.docs);
+
+        for (var i = 0; i < this.docs.length; i++) {
+            if (this.docs[i].docName === this.state.docName) {
+                doc = this.docs[i];
+                break;
+            }
+        }
+
+        let comments = doc.comments.filter(comment => comment.id !== id);
+
+        this.docs[i].comments = comments;
+        // console.log("comments:");
+        // console.log(comments);
+        if (comments.length > 0) {
+            this.prepareComments(comments);
+        } else {
+            this.setState({ commentItems: [] });
+        }
+        // unmountComponentAtNode(document.getElementById(commentId));
+    }
+
+    prepareComments(comments) {
+        const localCommentItems = [];
+
+        comments.forEach( (comment) => {
+            localCommentItems.push(
+                <Comment key={comment.id}
+                    id={comment.id}
+                    comment={comment.comment}
+                    handleCommentDelete={this.handleCommentDelete}
+                />
+            );
+        });
+        console.log(localCommentItems);
+        this.setState({ commentItems: localCommentItems });
+    }
+
     async loadDocument(e) {
         const doc = this.docs[await e.target.value];
 
@@ -153,16 +200,9 @@ export class TinyEditor extends React.Component {
                 commentObj.comment = comment.comment;
                 comments.push(commentObj);
             });
-
-            const localCommentItems = [];
-
-            comments.forEach( (comment) => {
-                localCommentItems.push(
-                    <Comment key={comment.id} id={comment.id} comment={comment.comment} />
-                );
-            });
-            console.log(localCommentItems);
-            this.setState({ commentItems: localCommentItems });
+            this.prepareComments(comments);
+        } else {
+            this.setState({ commentItems: [] });
         }
         // console.log(this.state._id);
         socket.emit("create", this.state._id);
@@ -534,7 +574,7 @@ export class TinyEditor extends React.Component {
                     <NavItem>
                         <NavLink className="App-button" data-testid="sendInvitation"
                             onClick = { this.sendInvitation }>
-                        Send invitation
+                        Skicka inbjudan
                         </NavLink>
                     </NavItem>
                     <NavItem>

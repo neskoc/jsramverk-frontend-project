@@ -63,7 +63,7 @@ export default class SignUpForm extends Component {
         }
         const { email, password } = this.state;
 
-        console.log(evt.target.name);
+        // console.log(evt.target.name);
         if (evt.target.name === 'login') {
             await this.loginUser(email, password)
                 // .then(() => {

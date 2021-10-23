@@ -157,3 +157,30 @@ form button:disabled {
   background-color: #dbf99f;
   color: #333;
 }
+
+.comment {
+  display: inline-block;
+  padding: 0.1rem;
+  width: 95%;
+  margin: 5px;
+  background-color: #ddd;
+  border-radius: 10px 10px 10px 10px;
+}
+
+.comment p {
+  float: left;
+  text-align: left;
+  width: 80%;
+  color: black;
+  font-size: 1rem;
+  background-color: #eff;
+  border-radius: 10px 10px 10px 10px;
+  padding: 0.5rem;
+}
+
+.comment button {
+  width: 10%;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 10px 10px 10px 10px;
+}
