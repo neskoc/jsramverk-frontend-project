@@ -26,7 +26,7 @@ export default class Comment extends Component {
 }
 
 Comment.propTypes = {
-    id: PropTypes.string.isRequired,
+    id: PropTypes.number.isRequired,
     comment: PropTypes.string.isRequired,
     handleCommentDelete: PropTypes.func.isRequired,
 };

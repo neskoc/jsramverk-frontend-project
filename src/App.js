@@ -30,9 +30,10 @@ import { javascript } from '@codemirror/lang-javascript';
 
 import './App.css';
 import sendEmail from "./mailgun.js";
+import execjs from './exec.js';
 import SignUpForm from './signupForm.js';
 import Comment from './comment.js';
-import execjs from './exec.js';
+// import Popup from './popup.js';
 
 let config = require("./config/db/config.json");
 
@@ -76,44 +77,47 @@ export class TinyEditor extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            value: null,
-            docName: '',
-            type: "text",
-            tmpDocName: '',
-            editorRef: null,
-            isOpen: false,
-            dropdownOpen: false,
-            setDropdownOpen: false,
-            dropdownItems: [],
-            commentItems: [],
-            isDocumentNew: true,
             _id: null,
-            token: null,
+            commentItems: [],
+            comments: [],
+            currentCommentMaxId: 0,
+            docName: '',
+            dropdownItems: [],
+            dropdownOpen: false,
+            editorRef: null,
             email: null,
-            password: null,
+            isDocumentNew: true,
+            isOpen: false,
             maxId: 0,
+            password: null,
+            setDropdownOpen: false,
+            tmpDocName: '',
+            token: null,
+            type: "text",
+            value: null,
         };
         this.docs = {};
         this.docNames = [];
+        this.rowElements = [ 'P', 'LI', 'H3', 'H2', 'H1' ];
 
         // this.fillDropdownItems();
 
-        this.saveDocName = this.saveDocName.bind(this);
-        this.loadDocument = this.loadDocument.bind(this);
-        this.updateDocument = this.updateDocument.bind(this);
+        this.execjs = this.execjs.bind(this);
+        this.export2Pdf = this.export2Pdf.bind(this);
+        this.fillDropdownItems = this.fillDropdownItems.bind(this);
+        this.handleCommentDelete = this.handleCommentDelete.bind(this);
         this.handleEditorChange = this.handleEditorChange.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
+        this.loadDocument = this.loadDocument.bind(this);
         this.log = this.log.bind(this);
+        this.prepareComments = this.prepareComments.bind(this);
+        this.saveDocName = this.saveDocName.bind(this);
+        this.sendInvitation = this.sendInvitation.bind(this);
         this.toggle = this.toggle.bind(this);
         this.toggleCollapsed = this.toggleCollapsed.bind(this);
-        this.fillDropdownItems = this.fillDropdownItems.bind(this);
-        this.updateToken = this.updateToken.bind(this);
-        this.export2Pdf = this.export2Pdf.bind(this);
-        this.sendInvitation = this.sendInvitation.bind(this);
+        this.updateDocument = this.updateDocument.bind(this);
         this.toggleEditorType = this.toggleEditorType.bind(this);
-        this.execjs = this.execjs.bind(this);
-        this.handleCommentDelete = this.handleCommentDelete.bind(this);
-        this.prepareComments = this.prepareComments.bind(this);
+        this.updateToken = this.updateToken.bind(this);
     }
 
     async execjs() {
@@ -139,31 +143,44 @@ export class TinyEditor extends React.Component {
     }
 
     async handleCommentDelete(event) {
-        const id = event.currentTarget.id.slice(7);
+        const id = parseInt(event.currentTarget.id.slice(7));
 
-        let doc;
-        // const doc = this.docs.filter(doc => doc.docName === this.state.docName)[0];
-
-        // console.log(this.docs);
+        let doc,
+            localComments = this.state.comments;
 
         for (var i = 0; i < this.docs.length; i++) {
             if (this.docs[i].docName === this.state.docName) {
                 doc = this.docs[i];
+                // document.getElementById(id);
                 break;
             }
         }
 
-        let comments = doc.comments.filter(comment => comment.id !== id);
+        // let comments = doc.comments.filter(comment => comment.id !== id);
 
-        this.docs[i].comments = comments;
+        // this.docs[i].comments = comments;
+        if (doc) {
+            this.docs[i].comments = doc.comments.filter(comment => comment.id !== id);
+            localComments = this.docs[i].comments;
+        } else {
+            localComments = localComments.filter(comment => comment.id !== id);
+        }
         // console.log("comments:");
         // console.log(comments);
-        if (comments.length > 0) {
-            this.prepareComments(comments);
+        if (localComments.length > 0) {
+            this.prepareComments(localComments);
         } else {
             this.setState({ commentItems: [] });
+            this.setState({ comments: [] });
         }
-        // unmountComponentAtNode(document.getElementById(commentId));
+        let markId = `mark-${id}`,
+            htmlDoc = new DOMParser().parseFromString(this.state.value, 'text/html'),
+            innerHTML = htmlDoc.getElementById(markId).innerHTML;
+
+        htmlDoc.getElementById(markId).parentNode.innerHTML = innerHTML;
+        // console.log('htmlDoc.outerHTML');
+        // console.log(htmlDoc.body.innerHTML);
+        this.setState({ value: htmlDoc.body.innerHTML });
     }
 
     prepareComments(comments) {
@@ -177,9 +194,43 @@ export class TinyEditor extends React.Component {
                     handleCommentDelete={this.handleCommentDelete}
                 />
             );
+            if (comment.id > this.state.currentCommentMaxId) {
+                this.setState({ currentCommentMaxId: parseInt(comment.id) });
+            }
         });
         console.log(localCommentItems);
+        this.setState({ comments: comments });
         this.setState({ commentItems: localCommentItems });
+    }
+
+    addComment(comment) {
+        let docFound = false;
+
+        let commentObj = {
+            id: this.state.currentCommentMaxId,
+            comment: comment,
+        };
+
+        for (var i = 0; i < this.docs.length; i++) {
+            if (this.docs[i].docName === this.state.docName) {
+                docFound = true;
+                break;
+            }
+        }
+
+        if (docFound) {
+            if (!this.docs[i].comments) {
+                this.docs[i].comments = [];
+            }
+            this.docs[i].comments.push(commentObj);
+            this.prepareComments(this.docs[i].comments);
+        } else {
+            let localComments = this.state.comments;
+
+            localComments.push(commentObj);
+            this.prepareComments(localComments);
+        }
+        // console.log(`comment: ${comment}`);
     }
 
     async loadDocument(e) {
@@ -202,9 +253,10 @@ export class TinyEditor extends React.Component {
             });
             this.prepareComments(comments);
         } else {
+            this.setState({ comments: [] });
             this.setState({ commentItems: [] });
+            this.setState({ currentCommentMaxId: 0 });
         }
-        // console.log(this.state._id);
         socket.emit("create", this.state._id);
     }
 
@@ -224,12 +276,13 @@ export class TinyEditor extends React.Component {
                     docName: this.state.docName,
                     content: this.state.value,
                     type: this.state.type,
+                    comments: this.state.comments,
                 },
                 api_key: config.api_key
             };
 
-            // console.log("data (before save):");
-            // console.log(data);
+            console.log("data (before save):");
+            console.log(data);
             if (this.state.isDocumentNew) {
                 fetchUrl = `${dsn}/mongo/create`;
             }
@@ -463,14 +516,64 @@ export class TinyEditor extends React.Component {
         });
     }
 
+    findClosestRowElement(editor) {
+        // console.log('editor');
+        // console.log(editor);
+
+        let result = {};
+
+        let row = editor.selection.getNode().closest(this.rowElements[0]),
+            nodeType = this.rowElements[0],
+            innerLen = Number.MAX_VALUE;
+
+        if (row) {
+            innerLen = row.innerHTML.length;
+        }
+        // console.log('this.rowElements[0]');
+        // console.log(this.rowElements[0]);
+        this.rowElements.slice(1).forEach(function (element) {
+            let hlpRow = editor.selection.getNode().closest(element);
+
+            if (hlpRow && hlpRow.innerHTML.length < innerLen) {
+                row = hlpRow;
+                nodeType = element;
+            }
+        });
+        if (row) {
+            innerLen = row.innerHTML.length;
+            let nodeTypeLen = nodeType.length,
+                outerContent = row.outerHTML,
+                outerLen = outerContent.length,
+                postfixLen = nodeTypeLen + 3,
+                prefixLen = outerLen - innerLen - postfixLen,
+                nodePrefix = outerContent.slice(0, prefixLen),
+                nodePostfix = outerContent.slice(-postfixLen);
+
+            result = {
+                row: row,
+                innerContent: row.innerHTML,
+                nodePrefix: nodePrefix,
+                nodePostfix: nodePostfix,
+            };
+            // console.log(`nodePrefix: ${nodePrefix}`);
+            // console.log(`nodePostfix: ${nodePostfix}`);
+            // console.log(`nodeType: ${nodeType}`);
+        }
+
+        return result;
+    }
+
     render() {
-        let editor, navbar, comments, message;
+        // let editor, navbar, comments, message;
 
         if (this.state.token) {
+            this.message = null;
             if (this.state.type === 'text') {
-                editor = <Editor
+                this.editor = <Editor
                     apiKey = "6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
-                    onInit = {(evt, editor) => this.setState({ editorRef: editor })}
+                    onInit = {(evt, editor) => {
+                        this.setState({ editorRef: editor });
+                    }}
                     initialValue = '<p>Skriv din text här!</p>'
                     value = { this.state.value }
                     onKeyUp = { this.handleKeyUp }
@@ -483,31 +586,58 @@ export class TinyEditor extends React.Component {
                             'searchreplace visualblocks code fullscreen',
                             'insertdatetime media table paste code help wordcount'
                         ],
+                        block_formats: 'Paragraph=p; Header 1=h1; Header 2=h2; Header 3=h3',
+                        content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
+                            'font-size:14px }',
                         toolbar: 'undo redo | formatselect | ' +
-                            'bold italic backcolor | alignleft aligncenter ' +
+                            'bold italic | alignleft aligncenter ' +
                             'alignright alignjustify | bullist numlist outdent indent | ' +
-                            'removeformat | kommentera | help',
+                            ' kommentera',
+                        that: this,
                         setup: function (editor) {
+                            let that = this.that;
+
+                            function commentOnAction() {
+                                editor.focus();
+                                if (!editor.selection.getNode().closest('MARK')) {
+                                    let res = that.findClosestRowElement(editor);
+
+                                    if (res) {
+                                        that.setState({
+                                            currentCommentMaxId: that.state.currentCommentMaxId + 1
+                                        });
+                                        let commentId = that.state.currentCommentMaxId,
+                                            comment = prompt('Kommentar för raden');
+
+                                        if (comment) {
+                                            const id = `mark-${commentId}`;
+
+                                            editor.selection.select(res.row);
+                                            editor.selection.setContent(
+                                                `${res.nodePrefix}<mark id='${id}'>` +
+                                                res.innerContent +
+                                                `</mark>${res.nodePostfix}`
+                                            );
+                                            // console.log(`id: ${id}`);
+                                            that.addComment(comment);
+                                        }
+                                    }
+                                } else {
+                                    alert('Den här raden redan har en kommentar!');
+                                }
+                            }
+
                             editor.ui.registry.addButton('kommentera', {
                                 text: 'Kommentera',
                                 icon: 'bookmark',
                                 tooltip: 'Kommentera markerad text',
-                                onAction: function () {
-                                    editor.focus();
-                                    if (editor.selection.getContent().length) {
-                                        editor.selection.setContent(
-                                            "<mark>" + editor.selection.getContent() + '</mark>'
-                                        );
-                                    }
-                                }
+                                onAction: commentOnAction,
                             });
                         },
-                        content_style: 'body { font-family:Helvetica,Arial,sans-serif;' +
-                            'font-size:14px }'
                     }}
                 />;
             } else {
-                editor = <CodeMirror
+                this.editor = <CodeMirror
                     className = "editor"
                     value = { this.state.value }
                     height = "500px"
@@ -520,10 +650,10 @@ export class TinyEditor extends React.Component {
                     }}
                 />;
             }
-            let execButton = '';
+            // let execButton = '';
 
             if (this.state.type === 'code') {
-                execButton =
+                this.execButton =
                     <NavItem>
                         <NavLink className="App-button" data-testid="ExecJS"
                             onClick = { this.execjs }>
@@ -531,7 +661,7 @@ export class TinyEditor extends React.Component {
                         </NavLink>
                     </NavItem>;
             }
-            navbar = <Navbar color="light" light expand="md">
+            this.navbar = <Navbar color="light" light expand="md">
                 <NavbarBrand>Meny: </NavbarBrand>
                 <Nav className="mr-auto" navbar>
                     <NavItem>
@@ -583,20 +713,20 @@ export class TinyEditor extends React.Component {
                             { this.state.type }
                         </NavLink>
                     </NavItem>
-                    { execButton }
+                    { this.execButton }
                 </Nav>
             </Navbar>;
-            comments = this.state.commentItems;
+            this.comments = this.state.commentItems;
         } else {
-            message = <SignUpForm updateToken={this.updateToken}/>;
+            this.message = <SignUpForm updateToken={this.updateToken}/>;
         }
         return (
             <>
                 {/* console.log("render") */}
-                { message }
-                { navbar }
-                { editor }
-                { comments }
+                { this.message }
+                { this.navbar }
+                { this.editor }
+                { this.comments }
             </>
         );
     }
