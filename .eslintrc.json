@@ -98,11 +98,6 @@
             2,
             "never"
         ],
-        "newline-after-var": [
-            2,
-            "warning",
-            "always"
-        ],
         "max-len": [
             2,
             100

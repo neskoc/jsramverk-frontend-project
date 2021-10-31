@@ -18,11 +18,6 @@ import {
     NavItem,
     NavLink
 } from 'reactstrap';
-import {
-    ApolloClient,
-    InMemoryCache,
-    ApolloProvider
-} from "@apollo/client";
 import { Editor } from '@tinymce/tinymce-react';
 import socketIOClient from "socket.io-client";
 import CodeMirror from '@uiw/react-codemirror';
@@ -47,31 +42,44 @@ if (process.env.NODE_ENV !== 'production') {
 
     if (process.env.REACT_APP_LOCAL === 'true') {
         dsn = "http://localhost:1337";
+        // console.log('local db');
     }
 }
 
-const client = new ApolloClient({
-    uri: `${dsn}/graphql`,
-    cache: new InMemoryCache()
-});
-
-const socket = socketIOClient(dsn);
-const ID = '_' + Math.random().toString(36).substr(2, 9);
+// const socket = socketIOClient(dsn);
+// const ID = '_' + Math.random().toString(36).substr(2, 9);
 
 // console.log("dsn: " + dsn);
 export class App extends Component {
+    constructor(props) {
+        super(props);
+        this.email = props.email || null;
+        this.password = props.password || null;
+    }
+    componentDidMount() {
+        this._isMounted = true;
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
+    }
+
     render() {
+        let tintEditor = <TinyEditor email={this.email} password={this.password}/>;
+
         return (
-            <ApolloProvider client={client}>
-                <App />
-            </ApolloProvider>,
             <div className="App">
                 <h1>Text editor baserad på React, TinyMCE och CodeMirror</h1>
-                <TinyEditor />
+                { tintEditor }
             </div>
         );
     }
 }
+
+App.propTypes = {
+    email: PropTypes.string,
+    password: PropTypes.string,
+};
 
 export class TinyEditor extends React.Component {
     constructor(props) {
@@ -85,11 +93,11 @@ export class TinyEditor extends React.Component {
             dropdownItems: [],
             dropdownOpen: false,
             editorRef: null,
-            email: null,
+            email: props.email || null,
             isDocumentNew: true,
             isOpen: false,
             maxId: 0,
-            password: null,
+            password: props.password || null,
             setDropdownOpen: false,
             tmpDocName: '',
             token: null,
@@ -99,6 +107,8 @@ export class TinyEditor extends React.Component {
         this.docs = {};
         this.docNames = [];
         this.rowElements = [ 'P', 'LI', 'H3', 'H2', 'H1' ];
+        this.socket = socketIOClient(dsn);
+        this.ID = '_' + Math.random().toString(36).substr(2, 9);
 
         // this.fillDropdownItems();
 
@@ -118,6 +128,22 @@ export class TinyEditor extends React.Component {
         this.updateDocument = this.updateDocument.bind(this);
         this.toggleEditorType = this.toggleEditorType.bind(this);
         this.updateToken = this.updateToken.bind(this);
+    }
+
+    componentDidMount() {
+        this._isMounted = true;
+        this.socket.on("doc", (data) => {
+            // console.log("callSocketOn data: ");
+            // console.log(data);
+            if (this.ID !== data.client_id) {
+                console.log("update state.value: ");
+                this.setState({value: data.doc});
+            }
+        });
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
     }
 
     async execjs() {
@@ -198,7 +224,7 @@ export class TinyEditor extends React.Component {
                 this.setState({ currentCommentMaxId: parseInt(comment.id) });
             }
         });
-        console.log(localCommentItems);
+        // console.log(localCommentItems);
         this.setState({ comments: comments });
         this.setState({ commentItems: localCommentItems });
     }
@@ -257,7 +283,7 @@ export class TinyEditor extends React.Component {
             this.setState({ commentItems: [] });
             this.setState({ currentCommentMaxId: 0 });
         }
-        socket.emit("create", this.state._id);
+        this.socket.emit("create", this.state._id);
     }
 
     async updateDocument() {
@@ -281,8 +307,8 @@ export class TinyEditor extends React.Component {
                 api_key: config.api_key
             };
 
-            console.log("data (before save):");
-            console.log(data);
+            // console.log("data (before save):");
+            // console.log(data);
             if (this.state.isDocumentNew) {
                 fetchUrl = `${dsn}/mongo/create`;
             }
@@ -328,6 +354,7 @@ export class TinyEditor extends React.Component {
                     if (doc.type === that.state.type) {
                         localDropDownItems.push(<DropdownItem key={doc._id}
                             data-testid={doc.docName}
+                            testid={doc.docName}
                             value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                         that.docs[doc.docName] = doc.content;
                         that.docNames.push(doc.docName);
@@ -436,7 +463,7 @@ export class TinyEditor extends React.Component {
                 link.click();
                 setTimeout(function () {
                     window.URL.revokeObjectURL(link);
-                }, 200);
+                }, 5000);
             });
         return await Promise.resolve(that.docs);
     }
@@ -480,7 +507,7 @@ export class TinyEditor extends React.Component {
         }
         let data = {
             _id: this.state._id,
-            client_id: ID,
+            client_id: this.ID,
             doc: doc,
         };
 
@@ -490,7 +517,7 @@ export class TinyEditor extends React.Component {
         const specKeys = ['Shift', 'Alt', 'Control', 'Tab', 'Meta'];
 
         if (!(specKeys.includes(value.key))) {
-            socket.emit("doc", data);
+            this.socket.emit("doc", data);
         }
     }
 
@@ -503,17 +530,6 @@ export class TinyEditor extends React.Component {
             .catch(function (error) {
                 console.log(error);
             });
-    }
-
-    componentDidMount() {
-        socket.on("doc", (data) => {
-            // console.log("callSocketOn data: ");
-            // console.log(data);
-            if (ID !== data.client_id) {
-                console.log("update state.value: ");
-                this.setState({value: data.doc});
-            }
-        });
     }
 
     findClosestRowElement(editor) {
@@ -564,12 +580,16 @@ export class TinyEditor extends React.Component {
     }
 
     render() {
-        // let editor, navbar, comments, message;
+        let editor,
+            navbar,
+            comments,
+            message,
+            execButton;
 
         if (this.state.token) {
-            this.message = null;
+            message = null;
             if (this.state.type === 'text') {
-                this.editor = <Editor
+                editor = <Editor
                     apiKey = "6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
                     onInit = {(evt, editor) => {
                         this.setState({ editorRef: editor });
@@ -637,7 +657,7 @@ export class TinyEditor extends React.Component {
                     }}
                 />;
             } else {
-                this.editor = <CodeMirror
+                editor = <CodeMirror
                     className = "editor"
                     value = { this.state.value }
                     height = "500px"
@@ -650,10 +670,9 @@ export class TinyEditor extends React.Component {
                     }}
                 />;
             }
-            // let execButton = '';
 
             if (this.state.type === 'code') {
-                this.execButton =
+                execButton =
                     <NavItem>
                         <NavLink className="App-button" data-testid="ExecJS"
                             onClick = { this.execjs }>
@@ -661,17 +680,21 @@ export class TinyEditor extends React.Component {
                         </NavLink>
                     </NavItem>;
             }
-            this.navbar = <Navbar color="light" light expand="md">
+            navbar = <Navbar color="light" light expand="md">
                 <NavbarBrand>Meny: </NavbarBrand>
                 <Nav className="mr-auto" navbar>
                     <NavItem>
-                        <NavLink className="App-button" data-testid="Spara"
+                        <NavLink className="App-button"
+                            data-testid="Spara"
+                            testid="Spara"
                             onClick = { this.updateDocument }>
                         Spara
                         </NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className="App-button" data-testid="Spara som"
+                        <NavLink className="App-button"
+                            data-testid="Spara som"
+                            testid="Spara som"
                             onClick = { this.toggleCollapsed }>
                             Spara som
                         </NavLink>
@@ -687,7 +710,9 @@ export class TinyEditor extends React.Component {
                         </Form>
                     </Collapse>
                     <UncontrolledDropdown nav inNavbar>
-                        <DropdownToggle nav caret  name="Redigera fil">
+                        <DropdownToggle nav caret  name="Redigera fil"
+                            data-testid="Redigera fil"
+                            testid="Redigera fil">
                             Redigera fil
                         </DropdownToggle>
                         <DropdownMenu right>
@@ -713,20 +738,23 @@ export class TinyEditor extends React.Component {
                             { this.state.type }
                         </NavLink>
                     </NavItem>
-                    { this.execButton }
+                    { execButton }
                 </Nav>
             </Navbar>;
-            this.comments = this.state.commentItems;
+            comments = this.state.commentItems;
         } else {
-            this.message = <SignUpForm updateToken={this.updateToken}/>;
+            message = <SignUpForm updateToken={this.updateToken}
+                email={this.state.email}
+                password={this.state.password}
+            />;
         }
         return (
             <>
                 {/* console.log("render") */}
-                { this.message }
-                { this.navbar }
-                { this.editor }
-                { this.comments }
+                { message }
+                { navbar }
+                { editor }
+                { comments }
             </>
         );
     }
@@ -734,6 +762,8 @@ export class TinyEditor extends React.Component {
 
 TinyEditor.propTypes = {
     value: PropTypes.string,
+    email: PropTypes.string,
+    password: PropTypes.string,
 };
 
 // export default { App, TinyEditor };

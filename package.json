@@ -26,7 +26,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "CI=true react-scripts test --coverage --detectOpenHandles",
+    "test": "CI=true react-scripts test --forceExit --coverage --detectOpenHandles",
     "eject": "react-scripts eject",
     "old_deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor",
     "deploy": "npm run build && rsync -av --delete -e 'ssh -i ~/.ssh/dbwebb' build/ necu20@ssh.student.bth.se:www/editor-project",

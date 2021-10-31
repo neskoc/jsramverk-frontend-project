@@ -3,6 +3,7 @@
 "use strict";
 
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
 let config = require("./config/db/config.json");
 
@@ -20,14 +21,15 @@ export default class SignUpForm extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            email: "",
-            password: "",
+            email: this.props.email || "",
+            password: this.props.password || "",
             touched: {
                 email: false,
                 password: false
             }
         };
 
+        this.propsCredentials = this.props.email ? true: false;
         this.handleEmailChange = this.handleEmailChange.bind(this);
         this.handlePasswordChange = this.handlePasswordChange.bind(this);
         this.handleBlur = this.handleBlur.bind(this);
@@ -152,6 +154,10 @@ export default class SignUpForm extends Component {
             return hasError ? shouldShow : false;
         };
 
+        if (this.propsCredentials) {
+            this.loginUser(this.state.email, this.state.password);
+            return '';
+        }
         return (
             <div className="form">
                 <label>
@@ -183,3 +189,8 @@ export default class SignUpForm extends Component {
         );
     }
 }
+
+SignUpForm.propTypes = {
+    email: PropTypes.string,
+    password: PropTypes.string,
+};
