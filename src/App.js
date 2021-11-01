@@ -483,7 +483,7 @@ export class TinyEditor extends React.Component {
         ).then(() => {
             console.log(this.state.type);
             if (this.state.type === 'code') {
-                this.setState({ value: '// CodeMirror editor\n' });
+                this.setState({ value: 'console.log("Test ExecJS");' });
             } else {
                 this.setState({ value: '<p>Skriv din text här!</p>' });
             }
