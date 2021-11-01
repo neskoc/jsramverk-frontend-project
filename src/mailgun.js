@@ -22,7 +22,7 @@ const sendEmail = {
             if (error) {
                 alert(error);
             } else {
-                console.log(body);
+                console.log(body.message);
                 alert("Invitation sent!");
             }
         });

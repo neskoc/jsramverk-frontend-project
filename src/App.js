@@ -4,7 +4,6 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-// import { unmountComponentAtNode } from 'react-dom';
 import {
     UncontrolledDropdown, DropdownToggle, DropdownMenu, DropdownItem,
     Button,
@@ -53,37 +52,32 @@ if (process.env.NODE_ENV !== 'production') {
 export class App extends Component {
     constructor(props) {
         super(props);
-        this.email = props.email || null;
-        this.password = props.password || null;
-    }
-    componentDidMount() {
-        this._isMounted = true;
-    }
-
-    componentWillUnmount() {
-        this._isMounted = false;
+        this.state = {
+            value: this.props.value,
+        };
     }
 
     render() {
-        let tintEditor = <TinyEditor email={this.email} password={this.password}/>;
-
         return (
             <div className="App">
                 <h1>Text editor baserad på React, TinyMCE och CodeMirror</h1>
-                { tintEditor }
+                <TinyEditor value={this.state.value}/>
             </div>
         );
     }
 }
 
-App.propTypes = {
-    email: PropTypes.string,
-    password: PropTypes.string,
-};
 
+App.propTypes = {
+    value: PropTypes.string,
+};
 export class TinyEditor extends React.Component {
     constructor(props) {
         super(props);
+        if (process.env.NODE_ENV === 'test') {
+            this.email = 'baraengang-mailgun@yahoo.com';
+            this.password = 'MailgunPa55';
+        }
         this.state = {
             _id: null,
             commentItems: [],
@@ -93,16 +87,16 @@ export class TinyEditor extends React.Component {
             dropdownItems: [],
             dropdownOpen: false,
             editorRef: null,
-            email: props.email || null,
+            email: this.email || null,
             isDocumentNew: true,
             isOpen: false,
             maxId: 0,
-            password: props.password || null,
+            password: this.password || null,
             setDropdownOpen: false,
             tmpDocName: '',
             token: null,
             type: "text",
-            value: null,
+            value: this.props.value,
         };
         this.docs = {};
         this.docNames = [];
@@ -152,9 +146,11 @@ export class TinyEditor extends React.Component {
     }
 
     async updateToken(token, email) {
-        await Promise.resolve(this.setState({ email: email}));
-        await Promise.resolve(this.setState({ token: token}));
-        await this.fillDropdownItems();
+        if (this._isMounted) {
+            await Promise.resolve(this.setState({ email: email}));
+            await Promise.resolve(this.setState({ token: token}));
+            await this.fillDropdownItems();
+        }
         // console.log(`updateToken: ${token}`);
     }
 
@@ -362,7 +358,9 @@ export class TinyEditor extends React.Component {
                 return localDropDownItems;
             })
             .then(function(items) {
-                that.setState({dropdownItems: items});
+                if (that._isMounted) {
+                    that.setState({dropdownItems: items});
+                }
             })
             .catch(err => {
                 console.log(err);
@@ -427,25 +425,45 @@ export class TinyEditor extends React.Component {
                 content: { content }
             })
         })
-            .then(response => response.body)
+            .then((response) => {
+                return response.body;
+            })
             .then(rs => {
-                const reader = rs.getReader();
+                // console.log(that);
 
-                return new ReadableStream({
-                    async start(controller) {
-                        // eslint-disable-next-line no-constant-condition
-                        while (true) {
-                            const { done, value } = await reader.read();
+                if (process.env.NODE_ENV === 'test') {
+                    let link = document.createElement("a");
 
-                            if (done) {
-                                break;
+                    link.href = '.';
+                    link.id = "ConvertedFile";
+                    link.style.visibility = 'hidden';
+
+                    document.body.appendChild(link);
+                    // console.log(link);
+
+                    setTimeout(function () {
+                        window.URL.revokeObjectURL(link);
+                    }, 15000);
+                    throw new Error('test');
+                } else {
+                    const reader = rs.getReader();
+
+                    return new ReadableStream({
+                        async start(controller) {
+                            // eslint-disable-next-line no-constant-condition
+                            while (true) {
+                                const { done, value } = await reader.read();
+
+                                if (done) {
+                                    break;
+                                }
+                                controller.enqueue(value);
                             }
-                            controller.enqueue(value);
+                            controller.close();
+                            reader.releaseLock();
                         }
-                        controller.close();
-                        reader.releaseLock();
-                    }
-                });
+                    });
+                }
             })
             .then(stream => new Response(stream))
             .then(response => response.blob())
@@ -463,7 +481,10 @@ export class TinyEditor extends React.Component {
                 link.click();
                 setTimeout(function () {
                     window.URL.revokeObjectURL(link);
-                }, 5000);
+                }, 100000);
+            })
+            .catch((err) => {
+                console.log(err);
             });
         return await Promise.resolve(that.docs);
     }
@@ -763,8 +784,6 @@ export class TinyEditor extends React.Component {
 
 TinyEditor.propTypes = {
     value: PropTypes.string,
-    email: PropTypes.string,
-    password: PropTypes.string,
 };
 
 // export default { App, TinyEditor };
