@@ -11,8 +11,8 @@ export default async function execjs(code) {
         code: Buffer.from(code).toString('base64')
     };
 
-    console.log('data');
-    console.log(data);
+    // console.log('data');
+    // console.log(data);
     await fetch(execjsUrl, {
         body: JSON.stringify(data),
         headers: {

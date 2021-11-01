@@ -481,7 +481,7 @@ export class TinyEditor extends React.Component {
         await Promise.resolve(
             this.setState({type: (this.state.type === 'text' ? 'code' : 'text') })
         ).then(() => {
-            console.log(this.state.type);
+            // console.log(this.state.type);
             if (this.state.type === 'code') {
                 this.setState({ value: 'console.log("Test ExecJS");' });
             } else {
@@ -734,7 +734,7 @@ export class TinyEditor extends React.Component {
                     </NavItem>
                     <NavItem>
                         <NavLink className="App-button"
-                            data-testid="EditorType"
+                            data-testid={`EditorType-${this.state.type}`}
                             onClick = { this.toggleEditorType }>
                             { this.state.type }
                         </NavLink>

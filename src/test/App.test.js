@@ -27,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
     // cleanup on exiting
+    jest.clearAllMocks();
     unmountComponentAtNode(container);
     document.body.removeChild(container);
     container = null;
@@ -121,6 +122,42 @@ describe("Klick on 'Export2Pdf'", () => {
             }).then((res) => expect(res).toBeNull())
             .catch((err) => {
                 console.log("Export2Pdf");
+                console.error(err);
+            });
+    });
+});
+
+describe("Klick on 'text' and run ExecJS", () => {
+    it("Should change link and print in console 'Test ExecJS'", async () => {
+        act(() => {
+            render(<App  email={email} password={password}/>, container);
+        });
+        (async () => {
+            return await Promise.resolve(screen.findByTestId("EditorType-text"));
+        })().then((anchor) => fireEvent.click(anchor))
+            .then(() => {
+                try {
+                    return screen.findByTestId('EditorType-code');
+                } catch (err) {
+                    console.log(err);
+                    return null;
+                }
+            }).then((res) => expect(res).not.toBeNull())
+            .then(() => {
+                try {
+                    jest.spyOn(console, 'log');
+                    return screen.findByTestId('ExecJS');
+                } catch (err) {
+                    console.info(err);
+                    return null;
+                }
+            }).then((anchor) => fireEvent.click(anchor))
+            .then(() => {
+                expect(console.log.mock.calls.length).toBe(1);
+                expect(console.log.mock.calls[0][0]).toBe('Test ExecJS');
+            })
+            .catch((err) => {
+                console.log("Code editor");
                 console.error(err);
             });
     });
