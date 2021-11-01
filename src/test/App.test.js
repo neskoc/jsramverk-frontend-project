@@ -92,6 +92,36 @@ describe("Klick on 'Spara som'", () => {
         })().then((anchor) => fireEvent.click(anchor))
             .then(() => {
                 return screen.findAllByTestId('docName');
-            }).then((res) => expect(res).not.toBeNull());
+            }).then((res) => expect(res).not.toBeNull())
+            .catch((err) => console.error(err));
+    });
+});
+
+describe("Klick on 'Export2Pdf'", () => {
+    it("Should append download link on page", async () => {
+        act(() => {
+            render(<App  email={email} password={password}/>, container);
+        });
+        (async () => {
+            return await Promise.resolve(screen.findByTestId("Export2Pdf"));
+        })().then((anchor) => fireEvent.click(anchor))
+            .then(() => {
+                setTimeout(() => {
+                    return screen.findAllByTestId('ConvertedFile');
+                }, 2500);
+            }).then((res) => expect(res).not.toBeNull())
+            .then(() => {
+                setTimeout(() => {
+                    try {
+                        return screen.findAllByTestId('ConvertedFile');
+                    } catch (err) {
+                        return null;
+                    }
+                }, 3000);
+            }).then((res) => expect(res).toBeNull())
+            .catch((err) => {
+                console.log("Export2Pdf");
+                console.error(err);
+            });
     });
 });

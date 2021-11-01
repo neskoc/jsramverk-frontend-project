@@ -354,7 +354,6 @@ export class TinyEditor extends React.Component {
                     if (doc.type === that.state.type) {
                         localDropDownItems.push(<DropdownItem key={doc._id}
                             data-testid={doc.docName}
-                            testid={doc.docName}
                             value={ix} onClick={that.loadDocument}>{doc.docName}</DropdownItem>);
                         that.docs[doc.docName] = doc.content;
                         that.docNames.push(doc.docName);
@@ -455,6 +454,7 @@ export class TinyEditor extends React.Component {
                 let link = document.createElement("a");
 
                 link.href = url;
+                link['data-testid'] = "ConvertedFile";
                 link.download = "ConvertedFile.pdf";
                 link.style.visibility = 'hidden';
 
@@ -674,7 +674,8 @@ export class TinyEditor extends React.Component {
             if (this.state.type === 'code') {
                 execButton =
                     <NavItem>
-                        <NavLink className="App-button" data-testid="ExecJS"
+                        <NavLink className="App-button"
+                            data-testid="ExecJS"
                             onClick = { this.execjs }>
                             ExecJS
                         </NavLink>
@@ -686,7 +687,6 @@ export class TinyEditor extends React.Component {
                     <NavItem>
                         <NavLink className="App-button"
                             data-testid="Spara"
-                            testid="Spara"
                             onClick = { this.updateDocument }>
                         Spara
                         </NavLink>
@@ -694,7 +694,6 @@ export class TinyEditor extends React.Component {
                     <NavItem>
                         <NavLink className="App-button"
                             data-testid="Spara som"
-                            testid="Spara som"
                             onClick = { this.toggleCollapsed }>
                             Spara som
                         </NavLink>
@@ -711,8 +710,7 @@ export class TinyEditor extends React.Component {
                     </Collapse>
                     <UncontrolledDropdown nav inNavbar>
                         <DropdownToggle nav caret  name="Redigera fil"
-                            data-testid="Redigera fil"
-                            testid="Redigera fil">
+                            data-testid="Redigera fil">
                             Redigera fil
                         </DropdownToggle>
                         <DropdownMenu right>
@@ -721,19 +719,22 @@ export class TinyEditor extends React.Component {
                         </DropdownMenu>
                     </UncontrolledDropdown>
                     <NavItem>
-                        <NavLink className="App-button" data-testid="Export2Pdf"
+                        <NavLink className="App-button"
+                            data-testid="Export2Pdf"
                             onClick = { this.export2Pdf }>
                         Export2Pdf
                         </NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className="App-button" data-testid="sendInvitation"
+                        <NavLink className="App-button"
+                            data-testid="sendInvitation"
                             onClick = { this.sendInvitation }>
                         Skicka inbjudan
                         </NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink className="App-button" data-testid="EditorType"
+                        <NavLink className="App-button"
+                            data-testid="EditorType"
                             onClick = { this.toggleEditorType }>
                             { this.state.type }
                         </NavLink>
