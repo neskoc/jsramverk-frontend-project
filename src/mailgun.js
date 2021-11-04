@@ -18,14 +18,28 @@ const sendEmail = {
             text: `Please register here: ${config.client_url}`,
         };
 
-        await mg.messages().send(data, function (error, body) {
-            if (error) {
-                alert(error);
-            } else {
-                console.log(body.message);
-                alert("Invitation sent!");
-            }
-        });
+        // await mg.messages().send(data, function (error, body) {
+        //     if (error) {
+        //         alert(error);
+        //     } else {
+        //         alert("Invitation sent!");
+        //         return body.message;
+        //     }
+        // });
+        const res = await mg.messages().send(data)
+            .then(body => {
+                if (process.env.NODE_ENV !== 'test') {
+                    alert("Invitation sent!");
+                }
+                return body.message;
+            }).catch (error => {
+                if (process.env.NODE_ENV !== 'test') {
+                    alert(error);
+                }
+                return error;
+            });
+
+        return await Promise.resolve(res);
     }
 
 };

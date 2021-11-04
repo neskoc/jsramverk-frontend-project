@@ -2,6 +2,8 @@
 
 "use strict";
 
+import { Buffer } from 'buffer';
+
 const config = require("./config/db/config.json");
 
 export default async function execjs(code) {
@@ -11,20 +13,18 @@ export default async function execjs(code) {
         code: Buffer.from(code).toString('base64')
     };
 
-    // console.log('data');
-    // console.log(data);
-    await fetch(execjsUrl, {
+    const res = await fetch(execjsUrl, {
+        url: execjsUrl,
         body: JSON.stringify(data),
         headers: {
             'content-type': 'application/json'
         },
         method: 'POST'
-    }).then(function (response) {
+    }).then(response => {
         return response.json();
-    }).then(function(result) {
-        // let decodedOutput = atob(result.data);
-        const decodedOutput = Buffer.from(result.data, 'base64').toString('utf-8');
+    }).then(result => {
+        return Buffer.from(result.data, 'base64').toString('utf-8');
+    }).catch(err => console.error(err));
 
-        console.log(decodedOutput); // outputs: hej
-    });
+    return await Promise.resolve(res);
 }

@@ -27,7 +27,9 @@ import sendEmail from "./mailgun.js";
 import execjs from './exec.js';
 import SignUpForm from './signupForm.js';
 import Comment from './comment.js';
+import HiddenDiv from './hiddenDiv.js';
 // import Popup from './popup.js';
+// const execjsExternal = require("./exec.js");
 
 let config = require("./config/db/config.json");
 
@@ -88,9 +90,12 @@ export class TinyEditor extends React.Component {
             dropdownOpen: false,
             editorRef: null,
             email: this.email || null,
+            execjsResult: '',
+            hiddenDivStatus: true,
             isDocumentNew: true,
             isOpen: false,
             maxId: 0,
+            mailgunResponse: null,
             password: this.password || null,
             setDropdownOpen: false,
             tmpDocName: '',
@@ -101,12 +106,14 @@ export class TinyEditor extends React.Component {
         this.docs = {};
         this.docNames = [];
         this.rowElements = [ 'P', 'LI', 'H3', 'H2', 'H1' ];
-        this.socket = socketIOClient(dsn);
+        if (process.env.NODE_ENV !== 'test') {
+            this.socket = socketIOClient(dsn);
+        }
         this.ID = '_' + Math.random().toString(36).substr(2, 9);
 
         // this.fillDropdownItems();
 
-        this.execjs = this.execjs.bind(this);
+        this.execjsLocal = this.execjsLocal.bind(this);
         this.export2Pdf = this.export2Pdf.bind(this);
         this.fillDropdownItems = this.fillDropdownItems.bind(this);
         this.handleCommentDelete = this.handleCommentDelete.bind(this);
@@ -126,22 +133,31 @@ export class TinyEditor extends React.Component {
 
     componentDidMount() {
         this._isMounted = true;
-        this.socket.on("doc", (data) => {
-            // console.log("callSocketOn data: ");
-            // console.log(data);
-            if (this.ID !== data.client_id) {
-                console.log("update state.value: ");
-                this.setState({value: data.doc});
-            }
-        });
+        if (process.env.NODE_ENV !== 'test') {
+            this.socket.on("doc", (data) => {
+                // console.log("callSocketOn data: ");
+                // console.log(data);
+                if (this.ID !== data.client_id) {
+                    console.log("update state.value: ");
+                    this.setState({value: data.doc});
+                }
+            });
+        }
     }
 
     componentWillUnmount() {
         this._isMounted = false;
     }
 
-    async execjs() {
-        await execjs(this.state.value)
+    async execjsLocal(value) {
+        await execjs(value)
+            .then(res => {
+                if (process.env.NODE_ENV !== 'test') {
+                    console.log(res);
+                }
+
+                this.setState({ execjsResult: res });
+            })
             .catch(err => console.error(err));
     }
 
@@ -279,7 +295,9 @@ export class TinyEditor extends React.Component {
             this.setState({ commentItems: [] });
             this.setState({ currentCommentMaxId: 0 });
         }
-        this.socket.emit("create", this.state._id);
+        if (process.env.NODE_ENV !== 'test') {
+            this.socket.emit("create", this.state._id);
+        }
     }
 
     async updateDocument() {
@@ -435,7 +453,8 @@ export class TinyEditor extends React.Component {
                     let link = document.createElement("a");
 
                     link.href = '.';
-                    link.id = "ConvertedFile";
+                    link.text = "ConvertedFile";
+                    link.textContent = "ConvertedFile";
                     link.style.visibility = 'hidden';
 
                     document.body.appendChild(link);
@@ -481,10 +500,9 @@ export class TinyEditor extends React.Component {
                 link.click();
                 setTimeout(function () {
                     window.URL.revokeObjectURL(link);
-                }, 100000);
+                }, 2000);
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(() => {
             });
         return await Promise.resolve(that.docs);
     }
@@ -538,7 +556,9 @@ export class TinyEditor extends React.Component {
         const specKeys = ['Shift', 'Alt', 'Control', 'Tab', 'Meta'];
 
         if (!(specKeys.includes(value.key))) {
-            this.socket.emit("doc", data);
+            if (process.env.NODE_ENV !== 'test') {
+                this.socket.emit("doc", data);
+            }
         }
     }
 
@@ -548,6 +568,13 @@ export class TinyEditor extends React.Component {
 
     async sendInvitation() {
         await sendEmail.sendInvitation(this.state.email)
+            .then(res => {
+                if (process.env.NODE_ENV !== 'test') {
+                    console.log(res);
+                }
+
+                this.setState({ mailgunResponse: res });
+            })
             .catch(function (error) {
                 console.log(error);
             });
@@ -605,10 +632,17 @@ export class TinyEditor extends React.Component {
             navbar,
             comments,
             message,
-            execButton;
+            execButton,
+            hiddenDiv1,
+            hiddenDiv2;
 
         if (this.state.token) {
             message = null;
+            hiddenDiv2 = <HiddenDiv
+                testId='mailgun'
+                text={this.state.mailgunResponse}
+                hidden={true}
+            />;
             if (this.state.type === 'text') {
                 editor = <Editor
                     apiKey = "6w4xfqcrs9ynuqz58gcd1vqv7ljydr52zcgurkczxgp96f7d"
@@ -685,8 +719,8 @@ export class TinyEditor extends React.Component {
                     extensions={[javascript({ jsx: true })]}
                     onKeyUp = { this.handleKeyUp }
                     // eslint-disable-next-line no-unused-vars
-                    onChange={(value, viewUpdate) => {
-                        console.log('value:', value);
+                    onChange={(value) => {
+                        // console.log('value:', value);
                         this.handleEditorChange(value);
                     }}
                 />;
@@ -696,11 +730,16 @@ export class TinyEditor extends React.Component {
                 execButton =
                     <NavItem>
                         <NavLink className="App-button"
-                            data-testid="ExecJS"
-                            onClick = { this.execjs }>
+                            data-testid="execjs"
+                            onClick = { () => this.execjsLocal(this.state.value) }>
                             ExecJS
                         </NavLink>
                     </NavItem>;
+                hiddenDiv1 = <HiddenDiv
+                    testId='execjsResult'
+                    text={this.state.execjsResult}
+                    hidden={this.state.hiddenDivStatus}
+                />;
             }
             navbar = <Navbar color="light" light expand="md">
                 <NavbarBrand>Meny: </NavbarBrand>
@@ -755,7 +794,7 @@ export class TinyEditor extends React.Component {
                     </NavItem>
                     <NavItem>
                         <NavLink className="App-button"
-                            data-testid={`EditorType-${this.state.type}`}
+                            data-testid='EditorType'
                             onClick = { this.toggleEditorType }>
                             { this.state.type }
                         </NavLink>
@@ -777,6 +816,8 @@ export class TinyEditor extends React.Component {
                 { navbar }
                 { editor }
                 { comments }
+                { hiddenDiv1 }
+                { hiddenDiv2 }
             </>
         );
     }
