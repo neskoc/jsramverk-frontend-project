@@ -313,6 +313,7 @@ export class TinyEditor extends React.Component {
             let fetchUrl = `${dsn}/mongo/update`;
             const data = {
                 doc: {
+                    _id: this.state._id,
                     docName: this.state.docName,
                     content: this.state.value,
                     type: this.state.type,

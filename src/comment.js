@@ -16,8 +16,9 @@ export default class Comment extends Component {
 
     render() {
         return (
-            <div className = "comment" id={`comment-${this.state.id}`}>
-                <p>{ this.state.comment }</p>
+            <div className="comment"
+                id={`comment-${this.state.id}`}>
+                <p data-testid={`comment-${this.state.id}`}>{ this.state.comment }</p>
                 <button id={ `button-${this.state.id}`}
                     onClick={this.props.handleCommentDelete}>Ta bort</button>
             </div>

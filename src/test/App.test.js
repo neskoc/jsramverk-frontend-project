@@ -134,3 +134,31 @@ describe("Click on 'Skicka inbjudan", () => {
         });
     });
 });
+
+describe("Get document 'Test' from DB", () => {
+    it("Should show one comment 'Test comment'", async () => {
+        let anchor;
+
+        act(() => {
+            render(<App />, rootContainer);
+        });
+
+
+        // await Promise.resolve(screen.findByTestId('EditorType'));
+
+        await waitFor(() => {
+            anchor = screen.getByTestId('Redigera fil');
+        });
+
+        fireEvent.click(anchor);
+        await waitFor(() => {
+            anchor = screen.getByTestId('Test');
+        });
+
+        fireEvent.click(anchor);
+        await waitFor(() => {
+            let div = screen.getByTestId('comment-1');
+            expect(div).toHaveTextContent('Test comment');
+        });
+    });
+});
